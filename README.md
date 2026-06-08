@@ -74,3 +74,5 @@ Sau khi index xong, bạn sẽ thấy 3 chỉ số thật: Số chunks, Doc ID, 
 Phần "Lịch sử upload trong phiên này" bên dưới ghi lại mọi lần index trong session
 
 Kiểm chứng thêm (tuỳ chọn): dữ liệu vector sẽ được lưu persistent tại data/vector_db/ (theo ChromaConfig.persist_dir mặc định) — bạn có thể kiểm tra thư mục này có file mới sau khi upload thành công.
+
+Link web: https://ai-research-assistant-with-rag-tnieqozgdhfzsrhujiz9bu.streamlit.app/
