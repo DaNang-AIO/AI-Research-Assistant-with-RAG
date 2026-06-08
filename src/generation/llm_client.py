@@ -4,6 +4,7 @@ Triển khai: S1-ME-01 (is_available, list_models), S3-ME-01 (generate,
 _build_request_body) và S3-ME-02 (generate_stream).
 """
 
+import json
 from typing import Any, Dict, List
 
 import requests
@@ -30,18 +31,59 @@ class OllamaClient(BaseLLMClient):
         self.max_tokens = max_tokens
 
     def generate(self, prompt: str, **kwargs) -> str:
-        """Gọi OLLAMA /api/generate endpoint, trả về text hoàn chỉnh.
+        """Gọi OLLAMA `/api/generate` endpoint (non-streaming), trả về text
+        hoàn chỉnh (Yêu cầu 5.1).
 
-        Triển khai: S3-ME-01 (Yêu cầu 5.1, 5.5).
+        Lỗi kết nối được bọc lại thành `ConnectionError` mô tả rõ `base_url`
+        đang dùng, để người dùng biết chính xác cần kiểm tra OLLAMA ở đâu
+        (Yêu cầu 5.5).
         """
-        raise NotImplementedError("OllamaClient.generate() sẽ được triển khai ở S3-ME-01")
+        assert prompt, "prompt không được rỗng"
+
+        body = self._build_request_body(prompt, stream=False, **kwargs)
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate", json=body, timeout=120
+            )
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            raise ConnectionError(
+                f"Không thể kết nối tới OLLAMA server tại '{self.base_url}' "
+                f"— hãy chắc chắn 'ollama serve' đang chạy. Chi tiết lỗi: {exc}"
+            ) from exc
+
+        return response.json().get("response", "")
 
     def generate_stream(self, prompt: str):
-        """Generator — yield từng token khi OLLAMA stream response.
+        """Generator — yield từng token khi OLLAMA stream response (Yêu cầu 5.3).
 
-        Triển khai: S3-ME-02 (Yêu cầu 5.3).
+        Mỗi dòng JSON trả về từ OLLAMA (`/api/generate` với `stream=True`)
+        chứa một mẩu `response`; generator yield tuần tự từng mẩu cho tới khi
+        OLLAMA báo `done=True`.
         """
-        raise NotImplementedError("OllamaClient.generate_stream() sẽ được triển khai ở S3-ME-02")
+        assert prompt, "prompt không được rỗng"
+
+        body = self._build_request_body(prompt, stream=True)
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate", json=body, stream=True, timeout=120
+            )
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            raise ConnectionError(
+                f"Không thể kết nối tới OLLAMA server tại '{self.base_url}' "
+                f"— hãy chắc chắn 'ollama serve' đang chạy. Chi tiết lỗi: {exc}"
+            ) from exc
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+            chunk = json.loads(line)
+            token = chunk.get("response", "")
+            if token:
+                yield token
+            if chunk.get("done"):
+                break
 
     def is_available(self) -> bool:
         """Ping OLLAMA server, trả về True nếu đang chạy.
@@ -70,8 +112,23 @@ class OllamaClient(BaseLLMClient):
         return [model.get("name", "") for model in data.get("models", [])]
 
     def _build_request_body(self, prompt: str, **kwargs) -> Dict[str, Any]:
-        """Xây dựng JSON body cho API request.
+        """Xây dựng JSON body cho `/api/generate`.
 
-        Triển khai: S3-ME-01.
+        `temperature`/`max_tokens` mặc định lấy từ cấu hình của client, nhưng
+        có thể bị ghi đè qua `**kwargs` (ví dụ khi thực nghiệm trong notebook).
+        `stream` mặc định `False` — `generate_stream()` truyền `stream=True`.
         """
-        raise NotImplementedError("OllamaClient._build_request_body() sẽ được triển khai ở S3-ME-01")
+        stream = kwargs.pop("stream", False)
+        temperature = kwargs.pop("temperature", self.temperature)
+        max_tokens = kwargs.pop("max_tokens", self.max_tokens)
+
+        return {
+            "model": self.model_name,
+            "prompt": prompt,
+            "stream": stream,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+            **kwargs,
+        }

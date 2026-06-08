@@ -119,11 +119,11 @@ with tab_quickstart:
         "Nạp tài liệu → Hỏi đáp → Kiểm chứng nguồn."
     )
 
-    st.warning(
-        "⚠️ **Lưu ý cho phiên bản hiện tại (Sprint 1):** phần \"đọc tài liệu\" đã "
-        "chạy thật, nhưng phần chia nhỏ / tạo embedding / trả lời vẫn đang ở chế độ "
-        "**minh hoạ (giả lập)** — đây là một dự án học tập được xây dựng dần theo "
-        "từng sprint. Các phần còn lại sẽ trở thành thật ở Sprint 2 và Sprint 3."
+    st.success(
+        "✅ **Cập nhật Sprint 3:** toàn bộ luồng RAG — đọc tài liệu, chia nhỏ, "
+        "tạo embedding, lưu trữ, truy xuất, xây prompt và sinh câu trả lời — "
+        "giờ đã chạy **thật** với LLM cục bộ qua OLLAMA. Hãy chắc chắn "
+        "`ollama serve` đang chạy và bạn đã `ollama pull` đủ model trước khi thử."
     )
 
 # ---------------------------------------------------------------------------
@@ -189,13 +189,14 @@ with tab_glossary:
 with tab_faq:
     st.subheader("Câu hỏi thường gặp")
 
-    with st.expander("Tại sao câu trả lời ở Chat Interface có vẻ chưa \"thông minh\"?"):
+    with st.expander("Vì sao Chat Interface báo \"OLLAMA không khả dụng\"?"):
         st.write(
-            "Dự án này được xây dựng dần theo từng **sprint** để bạn có thể quan "
-            "sát từng thành phần của RAG. Ở Sprint 1, phần \"sinh câu trả lời "
-            "thật\" chưa được nối — bạn đang thấy câu trả lời **minh hoạ (giả "
-            "lập)** để hình dung luồng hoạt động. Câu trả lời thật từ LLM cục bộ "
-            "sẽ xuất hiện từ Sprint 3."
+            "Từ Sprint 3, `RAGPipeline.query()` gọi LLM cục bộ **thật** qua "
+            "OLLAMA — nên server `ollama serve` phải đang chạy ở "
+            "`http://localhost:11434` và model bạn chọn ở sidebar (mục **LLM "
+            "Model**) phải đã được `ollama pull` về máy. Nếu chưa, hãy mở "
+            "terminal, chạy `ollama serve`, rồi `ollama pull llama3` (hoặc "
+            "model bạn muốn dùng) trước khi đặt câu hỏi."
         )
 
     with st.expander("OLLAMA là gì và tại sao tôi cần nó?"):
