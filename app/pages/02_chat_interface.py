@@ -2,11 +2,15 @@
 
 Khung điều hướng + cấu hình: S1-PE-01. Từ Sprint 3 (S3-PE-04), `RAGPipeline.
 query()` chạy luồng thật Embed → Retrieve → Build Prompt → Generate với LLM
-cục bộ qua OLLAMA — câu trả lời và danh sách nguồn tham chiếu được hiển thị
-qua component `app.components.chat_widget` (Yêu cầu 10.4).
+cục bộ qua OLLAMA. Câu trả lời cho câu hỏi mới được hiển thị **streaming**
+qua `RAGPipeline.query_stream()` + `st.write_stream()` — người dùng thấy chữ
+xuất hiện dần ngay khi LLM sinh ra, thay vì chờ cả khối văn bản; lịch sử các
+lượt hỏi-đáp trước đó hiển thị qua component `app.components.chat_widget`
+(Yêu cầu 10.4).
 """
 
 import sys
+import time
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -18,6 +22,7 @@ import streamlit as st
 from app.components import chat_widget
 from app.components.pipeline_factory import build_pipeline
 from app.components.sidebar import render_sidebar_config
+from src.models import RAGResponse
 
 st.set_page_config(page_title="Chat Interface", page_icon="💬", layout="wide")
 
@@ -58,7 +63,16 @@ if not pipeline.llm_client.is_available():
 else:
     st.caption(
         "ℹ️ Câu trả lời được sinh **thật** từ LLM cục bộ qua OLLAMA — luồng "
-        "Embed → Retrieve → Build Prompt → Generate (Sprint 3)."
+        "Embed → Retrieve → Build Prompt → Generate (Sprint 3), hiển thị "
+        "**streaming** (chữ xuất hiện dần khi LLM đang sinh)."
+    )
+    st.caption(
+        "⏳ **Lưu ý:** trước khi hiện chữ đầu tiên, mô hình cần thời gian "
+        "\"đọc\" toàn bộ prompt (câu hỏi + các đoạn ngữ cảnh truy xuất được) — "
+        "với LLM chạy cục bộ trên CPU, bước này có thể mất **30-90 giây** tuỳ "
+        "độ dài ngữ cảnh, *trước khi* streaming thực sự bắt đầu. Muốn rút "
+        "ngắn: giảm **Top-K Retrieval** và/hoặc **Chunk Size** ở sidebar để "
+        "prompt ngắn hơn."
     )
 
 if "chat_messages" not in st.session_state:
@@ -75,11 +89,35 @@ if question:
             "hãy khởi động `ollama serve` rồi thử lại."
         )
     else:
+        with st.chat_message("user"):
+            st.write(question)
+
         try:
-            with st.spinner("Đang xử lý câu hỏi (embed → truy xuất → soạn câu trả lời)..."):
-                response = pipeline.query(question)
+            with st.spinner("Đang embed câu hỏi và truy xuất context liên quan..."):
+                contexts, model_name, token_stream = pipeline.query_stream(question)
+
+            start_time = time.perf_counter()
+            with st.chat_message("assistant"):
+                st.caption(
+                    "🧠 Mô hình đang đọc prompt (câu hỏi + ngữ cảnh) — chữ đầu "
+                    "tiên có thể cần khoảng nửa phút mới xuất hiện, sau đó sẽ "
+                    "hiện dần liên tục cho tới khi trả lời xong..."
+                )
+                answer = st.write_stream(token_stream)
+                latency_ms = (time.perf_counter() - start_time) * 1000
+                st.caption(
+                    f"Model: `{model_name}` · Latency: {latency_ms:.1f} ms · "
+                    f"Nguồn tham chiếu: {len(contexts)}"
+                )
+                chat_widget.render_sources(contexts)
         except Exception as exc:
             st.error(f"Có lỗi khi xử lý câu hỏi: {exc}")
         else:
+            response = RAGResponse(
+                question=question,
+                answer=answer,
+                contexts=contexts,
+                model_name=model_name,
+                latency_ms=latency_ms,
+            )
             st.session_state["chat_messages"].append((question, response))
-            st.rerun()

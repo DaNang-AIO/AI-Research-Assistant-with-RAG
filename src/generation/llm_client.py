@@ -18,6 +18,11 @@ class OllamaClient(BaseLLMClient):
     Hỗ trợ streaming và non-streaming response.
     """
 
+    # LLM cục bộ chạy trên CPU có thể mất hàng chục giây chỉ để "đọc" prompt
+    # (prefill) trước khi sinh token đầu tiên — 120s từng gây ReadTimeout giả
+    # (server vẫn đang xử lý bình thường, chỉ là chậm hơn ngưỡng chờ).
+    REQUEST_TIMEOUT_SECONDS = 300
+
     def __init__(
         self,
         model_name: str = "llama3",
@@ -43,7 +48,7 @@ class OllamaClient(BaseLLMClient):
         body = self._build_request_body(prompt, stream=False, **kwargs)
         try:
             response = requests.post(
-                f"{self.base_url}/api/generate", json=body, timeout=120
+                f"{self.base_url}/api/generate", json=body, timeout=self.REQUEST_TIMEOUT_SECONDS
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
@@ -66,7 +71,10 @@ class OllamaClient(BaseLLMClient):
         body = self._build_request_body(prompt, stream=True)
         try:
             response = requests.post(
-                f"{self.base_url}/api/generate", json=body, stream=True, timeout=120
+                f"{self.base_url}/api/generate",
+                json=body,
+                stream=True,
+                timeout=self.REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
