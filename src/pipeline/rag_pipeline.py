@@ -5,7 +5,6 @@ luồng giả lập), S2-PE-01 (index_document/index_directory thật), và
 S3-PE-03 (query thật — Property 10).
 """
 
-import math
 import time
 from typing import List
 
@@ -45,16 +44,29 @@ class RAGPipeline:
         self.top_k = top_k
 
     def index_document(self, file_path: str) -> IndexingResult:
-        """Stub Sprint 1 — tải tài liệu thật bằng `loader`, giả lập phần
-        chunk/embed/store để dashboard có thể demo luồng "Mocked End-to-End".
+        """Luồng indexing đầy đủ: Load → Chunk → Embed → Store
+        (pseudocode design.md §2.7, S2-PE-01).
 
-        Luồng thật (Load → Chunk → Embed → Store, theo loop invariant
-        `len(vectors) == i`) sẽ thay thế phần giả lập này ở S2-PE-01
-        (pseudocode design.md §2.7).
+        Loop Invariant của vòng lặp embed: `len(vectors) == i` — số vector
+        đã tạo luôn khớp số chunk đã xử lý, không chunk nào bị bỏ sót.
         """
         collection_name = getattr(self.vector_store, "collection_name", "rag_collection")
         try:
             document = self.loader.load(file_path)
+            assert document.content, (
+                "Tài liệu không có nội dung văn bản trích xuất được "
+                "(ví dụ: PDF dạng ảnh/đồ hoạ không chứa text có thể chọn)"
+            )
+
+            chunks = self.chunker.chunk(document)
+            assert len(chunks) >= 1, "Không tạo được chunk nào từ nội dung tài liệu"
+
+            vectors: List[List[float]] = []
+            for i, chunk in enumerate(chunks):
+                assert len(vectors) == i  # invariant: đã embed đúng i chunks
+                vectors.append(self.embedding_model.embed_text(chunk.content))
+
+            success = self.vector_store.add(chunks, vectors)
         except Exception as exc:
             return IndexingResult(
                 doc_id="",
@@ -64,16 +76,11 @@ class RAGPipeline:
                 error_message=str(exc),
             )
 
-        # Giả lập số chunk dựa trên chunk_size cấu hình (sẽ thay bằng
-        # chunker.chunk(document) thật ở S2-PE-01)
-        chunk_size = getattr(self.chunker, "chunk_size", 512)
-        num_chunks = max(1, math.ceil(len(document.content) / chunk_size))
-
         return IndexingResult(
             doc_id=document.doc_id,
-            num_chunks=num_chunks,
+            num_chunks=len(chunks),
             collection_name=collection_name,
-            success=True,
+            success=success,
         )
 
     def query(self, question: str) -> RAGResponse:

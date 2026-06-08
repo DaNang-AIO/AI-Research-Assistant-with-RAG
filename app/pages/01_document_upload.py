@@ -1,7 +1,8 @@
 """Trang Document Upload — tải tài liệu lên và xem kết quả indexing.
 
-Triển khai: S1-PE-03 (Yêu cầu 10.3) — gọi `pipeline.index_document()` (đang là
-stub giả lập ở Sprint 1, sẽ thay bằng luồng thật ở S2-PE-02).
+Triển khai: S1-PE-03 (khung trang, Yêu cầu 10.3) và S2-PE-02 — `pipeline.
+index_document()` giờ chạy luồng thật Load → Chunk → Embed → Store và lưu
+vào ChromaDB, trả về `IndexingResult` với số chunk thật.
 """
 
 import sys
@@ -48,9 +49,10 @@ con số này phụ thuộc vào độ dài tài liệu và Chunk Size bạn đ�
     )
 
 st.caption(
-    "ℹ️ Ở Sprint 1, bước \"đọc tài liệu\" đã chạy thật — các bước "
-    "chunk/embed/lưu trữ vẫn đang ở chế độ **minh hoạ (giả lập)** và sẽ trở "
-    "thành luồng thật ở Sprint 2 (S2-PE-02)."
+    "✅ Từ Sprint 2: toàn bộ luồng index (đọc → chia nhỏ → tạo embedding → "
+    "lưu trữ) đã chạy **thật** qua `RAGPipeline.index_document()` — cần "
+    "OLLAMA server đang chạy với embedding model đã chọn ở sidebar "
+    "(`ollama serve` + `ollama pull <embedding model>`)."
 )
 
 if "indexing_history" not in st.session_state:
