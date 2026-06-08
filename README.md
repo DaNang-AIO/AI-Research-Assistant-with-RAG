@@ -53,23 +53,30 @@ Dự án đang ở **Sprint 3 — Thử Nghiệm & Theo Dõi**: Đã hoàn thi�
 
 ### Cách kiểm tra trên UI
 
-Làm cụ thể từng bước với máy của bạn
 Hiện bạn đã có sẵn 1 phiên tên chunk_512_top_k_5. Bạn cần thêm một phiên thứ hai để có cái để so sánh:
 
 Bước 1 — Tạo dữ liệu cho phiên thứ 2:
 
 Kéo thanh trượt Chunk Size sang một giá trị khác (vd. 256)
+
 Vào trang Document Upload hoặc Chat Interface, upload tài liệu / đặt câu hỏi vài lần (để có sự kiện mới được ghi log với cấu hình mới này)
+
 Bước 2 — Lưu phiên thứ 2:
 
 Quay lại trang Experiment Log
+
 Trong ô "Tên phiên" (cột trái, "Lưu phiên hiện tại"), gõ một tên mới, vd: chunk_256_top_k_6
+
 Bấm nút "💾 Lưu phiên"
+
 → Bây giờ bạn có 2 file: chunk_512_top_k_5.json và chunk_256_top_k_6.json
+
 Bước 3 — So sánh (cột phải):
 
 Ô "Phiên A": gõ chunk_512_top_k_5 (gõ y hệt, không có .json)
+
 Ô "Phiên B": gõ chunk_256_top_k_6
+
 Bấm "🔍 So sánh"
 
 Link web: https://ai-research-assistant-with-rag-5zbwnhwqirbkmdui4ejijh.streamlit.app/
