@@ -17,7 +17,8 @@ class PromptBuilder:
 
     DEFAULT_SYSTEM_PROMPT = (
         "Bạn là trợ lý nghiên cứu. Hãy trả lời câu hỏi DỰA TRÊN "
-        "ngữ cảnh được cung cấp. Nếu không đủ thông tin, hãy nói rõ."
+        "ngữ cảnh được cung cấp. Nếu không đủ thông tin, hãy nói rõ. "
+        "LUÔN LUÔN trả lời bằng ngôn ngữ của câu hỏi."
     )
 
     def __init__(self, system_prompt: str = DEFAULT_SYSTEM_PROMPT):

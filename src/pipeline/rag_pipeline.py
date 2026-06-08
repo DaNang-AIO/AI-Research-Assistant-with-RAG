@@ -130,6 +130,35 @@ class RAGPipeline:
             latency_ms=latency_ms,
         )
 
+    def query_stream(self, question: str):
+        """Biến thể streaming của `query()` — dùng cho UI cần hiển thị câu trả
+        lời ngay khi từng token được LLM sinh ra (vd. `st.write_stream`), thay
+        vì đợi toàn bộ `generate()` hoàn tất rồi mới hiển thị một lần.
+
+        Preconditions giống `query()`. Thực hiện 3 bước đầu (Embed → Retrieve
+        → Build Prompt) ngay lập tức rồi trả về `(contexts, model_name,
+        token_stream)` — `token_stream` là generator sinh từng đoạn văn bản từ
+        `llm_client.generate_stream()`. Caller tự tiêu thụ `token_stream` để
+        hiển thị realtime, ráp `answer` từ các token và tự đo `latency_ms`
+        (vì thời gian sinh phụ thuộc vào tốc độ caller tiêu thụ generator).
+        """
+        assert question, "question không được rỗng"
+        assert self.llm_client.is_available(), (
+            f"OLLAMA server không khả dụng tại "
+            f"'{getattr(self.llm_client, 'base_url', '?')}' — hãy chạy 'ollama serve'"
+        )
+
+        query_vector = self.embedding_model.embed_text(question)
+        assert len(query_vector) == self.embedding_model.dimension
+
+        contexts = self.retriever.retrieve(query_vector, k=self.top_k)
+
+        prompt = self.prompt_builder.build(question, contexts)
+        assert question in prompt
+
+        model_name = getattr(self.llm_client, "model_name", "llama3")
+        return contexts, model_name, self.llm_client.generate_stream(prompt)
+
     def index_directory(self, dir_path: str) -> List[IndexingResult]:
         """Index tất cả tài liệu trong một thư mục."""
         return [

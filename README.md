@@ -66,4 +66,4 @@ Khi OLLAMA sẵn sàng: câu trả lời thật từ LLM, kèm dòng caption Mod
 🔍 Retrieval Debug — mở ngay sau khi hỏi, xem chi tiết từng ScoredChunk (score giảm dần trong [0,1], vị trí start_index:end_index, nội dung đầy đủ) — chính là context đã được dùng để tạo câu trả lời ở bước 2.
 Đổi Top-K hoặc LLM Model ở sidebar rồi hỏi lại để thấy kết quả thay đổi theo thời gian thực.
 
-Link web: https://ai-research-assistant-with-rag-tnieqozgdhfzsrhujiz9bu.streamlit.app/
+Link web: https://ai-research-assistant-with-rag-z4by6bembkrbwqzuphdoi32r.streamlit.app/
