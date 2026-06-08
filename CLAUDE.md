@@ -4,13 +4,23 @@ File này cung cấp hướng dẫn cho Claude Code (claude.ai/code) khi làm vi
 
 ## Trạng Thái Dự Án
 
-Repository này hiện **chỉ mới có spec** — chưa có mã nguồn nào được viết (chưa có `src/`, `app/`, `notebooks/`, `tests/`, hay `requirements.txt`). Nội dung hiện có chỉ gồm:
+Repository đã đi qua **Sprint 0 (Khởi Tạo & Nền Tảng)**: khung thư mục đầy đủ đã được dựng theo đúng cấu trúc trong design.md, cùng với phần dùng chung (`SHARED`) đã triển khai thật:
 
-- [README.md](README.md) — tiêu đề placeholder
+- [src/models.py](src/models.py) — đầy đủ data models & enums (`Document`, `Chunk`, `EmbeddingVector`, `ScoredChunk`, `RAGResponse`, `IndexingResult`, `ExperimentLog`, `ChunkStrategy`, `DocumentType`)
+- [src/interfaces.py](src/interfaces.py) — đầy đủ các ABC (`BaseLoader`, `BaseChunker`, `BaseEmbeddingModel`, `BaseVectorStore`, `BaseLLMClient`) kèm pre/postcondition trong docstring
+- [config/settings.py](config/settings.py), [config/models.yaml](config/models.yaml), [.env.example](.env.example) — khung cấu hình với giá trị mặc định hợp lý (`AppConfig.from_env()` sẽ hoàn thiện việc đọc `.env` ở Sprint 5)
+- `requirements.txt`, cấu trúc thư mục `data/`, `experiments/`, `app/`, `notebooks/{data_engineer,pipeline_engineer,model_engineer}/`
+
+**Phần lớn các module còn lại trong `src/`, `app/`, `tests/` hiện là *stub có chủ đích*** — mỗi file chỉ có docstring mô tả class/hàm sẽ chứa gì và **task ID tương ứng** sẽ hiện thực nó (ví dụ docstring trong [src/data/loader.py](src/data/loader.py) ghi "Triển khai: S1-DE-01, S1-DE-02"; [src/pipeline/rag_pipeline.py](src/pipeline/rag_pipeline.py) ghi "S1-PE-02, S2-PE-01, S3-PE-03"). Đây không phải code dở dang cần dọn — đó là điểm bắt đầu có chủ đích cho các sprint kế tiếp theo lộ trình trong tasks.md. **Khi được giao một task (ví dụ "làm S1-DE-01"), hãy mở đúng file stub đó, đọc docstring để biết phạm vi, rồi hiện thực theo đúng signature trong design.md.** Thư mục `notebooks/*/` hiện chỉ có `.gitkeep` — chưa có notebook nào được tạo.
+
+Ba tài liệu đặc tả (đọc theo thứ tự khi cần định hướng tổng thể):
+
+- [README.md](README.md)
 - [specs/rag-research-assistant/requirements.md](specs/rag-research-assistant/requirements.md) — tài liệu yêu cầu chức năng/phi chức năng (định dạng EARS/INCOSE, 12 nhóm yêu cầu)
 - [specs/rag-research-assistant/design.md](specs/rag-research-assistant/design.md) — tài liệu thiết kế đầy đủ: kiến trúc, data models, interfaces, function signatures, thuật toán, correctness properties và chiến lược testing
+- [specs/rag-research-assistant/tasks.md](specs/rag-research-assistant/tasks.md) — kế hoạch sprint/task theo Agile/Scrum cho 3 vai trò (`DE`/`PE`/`ME`/`SHARED`); quy ước Task ID là `S<sprint>-<vai trò>-<số thứ tự>` (ví dụ `S2-DE-03`), mỗi task trỏ thẳng tới class/method/requirement cụ thể trong design.md/requirements.md — **đây là nguồn xác định "làm gì tiếp theo"**
 
-**Trước khi viết bất kỳ đoạn code nào, hãy đọc cả hai file spec.** Tài liệu thiết kế (design.md) là bản thiết kế chuẩn (authoritative blueprint): nó quy định chính xác tên class, method signature, các trường trong dataclass, cấu trúc thư mục, và thậm chí cả pseudocode cho các thuật toán cốt lõi (`index_document`, `query`). Khi triển khai, hãy bám sát các signature này thay vì tự ý thay đổi, vì các acceptance criteria trong requirements.md và các correctness properties (Phần 3 của design.md) đều được viết dựa trên các signature đó.
+**Trước khi viết bất kỳ đoạn code nào, hãy đọc design.md (và phần liên quan của requirements.md/tasks.md).** Tài liệu thiết kế (design.md) là bản thiết kế chuẩn (authoritative blueprint): nó quy định chính xác tên class, method signature, các trường trong dataclass, cấu trúc thư mục, và thậm chí cả pseudocode cho các thuật toán cốt lõi (`index_document`, `query`). Khi triển khai, hãy bám sát các signature này thay vì tự ý thay đổi, vì các acceptance criteria trong requirements.md và các correctness properties (Phần 3 của design.md) đều được viết dựa trên các signature đó.
 
 ## Dự Án Này Là Gì
 
@@ -83,6 +93,6 @@ pytest tests/ -v
 
 ## Lưu Ý Khi Triển Khai
 
-- Cấu hình được nạp qua biến môi trường: `AppConfig.from_env()` đọc từ `.env` (xem `.env.example`, sẽ cần được tạo) và dùng giá trị mặc định hợp lý khi biến môi trường không được định nghĩa; danh sách model OLLAMA được hỗ trợ nằm trong `config/models.yaml`.
+- Cấu hình được nạp qua biến môi trường: `AppConfig.from_env()` đọc từ `.env` (xem [.env.example](.env.example) — đã có sẵn các biến mặc định, copy thành `.env` để tuỳ chỉnh) và dùng giá trị mặc định hợp lý khi biến môi trường không được định nghĩa; danh sách model OLLAMA được hỗ trợ nằm trong [config/models.yaml](config/models.yaml).
 - Các notebook phải chạy được từ đầu đến cuối mà không gặp lỗi ngoại lệ chưa xử lý, và được kỳ vọng sử dụng `ExperimentTracker` để ghi lại kết quả thực nghiệm mà không làm gián đoạn luồng notebook.
 - Streamlit dashboard có đúng 4 trang (Document Upload, Chat Interface, Retrieval Debug, Experiment Log), được điều khiển bởi cấu hình sidebar dùng chung (LLM model, embedding model, chunk size, top-k) lưu trong `st.session_state`.
