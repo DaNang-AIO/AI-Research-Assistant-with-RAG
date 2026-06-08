@@ -1,0 +1,21 @@
+# Danh sách các model OLLAMA được hỗ trợ trong dự án (Yêu cầu 11.4).
+# Chạy `ollama pull <name>` để tải model về trước khi sử dụng.
+
+llm_models:
+  - name: llama3
+    description: "Model sinh câu trả lời mặc định — cân bằng giữa chất lượng và tốc độ"
+    context_length: 8192
+  - name: mistral
+    description: "Model thay thế, nhẹ hơn — dùng để so sánh trong model_engineer/02_model_comparison"
+    context_length: 8192
+  - name: gemma
+    description: "Model thay thế của Google — dùng để so sánh trong model_engineer/02_model_comparison"
+    context_length: 8192
+
+embedding_models:
+  - name: nomic-embed-text
+    description: "Embedding model mặc định, deterministic, dùng cho indexing và truy vấn"
+    dimension: 768
+  - name: mxbai-embed-large
+    description: "Embedding model thay thế — dùng để so sánh trong model_engineer/03_embedding_models"
+    dimension: 1024
