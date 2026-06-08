@@ -49,4 +49,28 @@ Xem [design.md §1.2](specs/rag-research-assistant/design.md) để biết chi t
 
 ## Trạng Thái
 
-Dự án đang ở **Sprint 0 — Khởi Tạo & Nền Tảng**: đã có khung thư mục, data models, interfaces (ABC) và cấu hình dùng chung. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
+Dự án đang ở **Sprint 2 — Kết Nối Ollama & Pipeline Cục Bộ**: đã hoàn thiện cấu hình Ollama, triển khai pipeline index/retrieval cục bộ với nomic-embed-text và Llama 3, tích hợp vào Streamlit và thêm trang debug. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
+
+## Cách kiểm tra Sprint 2 trên giao diện Streamlit
+
+Sprint 2 làm cho trang Document Upload chạy luồng index thật (Load → Chunk → Embed → Store), nên để thấy nó hoạt động bạn cần OLLAMA đang chạy thật sự (mình vừa kiểm tra — hiện OLLAMA chưa chạy trên máy bạn).
+
+### Bước 1 — Khởi động OLLAMA và tải model embedding (mở một terminal riêng):
+
+ollama serve
+ollama pull nomic-embed-text # model embedding mặc định trong config/settings.py
+Có thể cần ollama pull llama3 nếu trang chính (main.py) báo "chưa kết nối" — trang đó cũng kiểm tra trạng thái OLLAMA cho model sinh câu trả lời.
+
+### Bước 2 — Chạy dashboard:
+
+streamlit run app/main.py
+
+### Bước 3 — Vào trang "📄 Document Upload" ở thanh điều hướng bên trái:
+
+Tải lên một file .txt/.md/.pdf — bạn có thể dùng luôn 2 file mẫu vừa được notebook Sprint 2 tạo ra: data/raw/sample_rag_overview.txt và data/raw/sample_chunking_notes.md
+
+Sau khi index xong, bạn sẽ thấy 3 chỉ số thật: Số chunks, Doc ID, Collection — đây chính là kết quả từ RAGPipeline.index_document() chạy luồng Sprint 2 (đọc file → TextChunker chia nhỏ → OllamaEmbeddingModel tạo vector → ChromaVectorStore lưu trữ)
+
+Phần "Lịch sử upload trong phiên này" bên dưới ghi lại mọi lần index trong session
+
+Kiểm chứng thêm (tuỳ chọn): dữ liệu vector sẽ được lưu persistent tại data/vector_db/ (theo ChromaConfig.persist_dir mặc định) — bạn có thể kiểm tra thư mục này có file mới sau khi upload thành công.
