@@ -1,8 +1,9 @@
 """Trang Chat Interface — đặt câu hỏi và xem câu trả lời từ RAG pipeline.
 
-Khung điều hướng + cấu hình: S1-PE-01. Câu trả lời ở Sprint 1 vẫn là **giả
-lập** (RAGPipeline.query() đang là stub) — component `chat_widget` và luồng
-hỏi-đáp thật sẽ hoàn thiện ở S3-PE-04 (Yêu cầu 10.4).
+Khung điều hướng + cấu hình: S1-PE-01. Từ Sprint 3 (S3-PE-04), `RAGPipeline.
+query()` chạy luồng thật Embed → Retrieve → Build Prompt → Generate với LLM
+cục bộ qua OLLAMA — câu trả lời và danh sách nguồn tham chiếu được hiển thị
+qua component `app.components.chat_widget` (Yêu cầu 10.4).
 """
 
 import sys
@@ -14,6 +15,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
+from app.components import chat_widget
 from app.components.pipeline_factory import build_pipeline
 from app.components.sidebar import render_sidebar_config
 
@@ -46,28 +48,38 @@ ngay sau khi nhận được câu trả lời.
         """
     )
 
-st.caption(
-    "ℹ️ Sprint 1: câu trả lời vẫn đang ở chế độ **minh hoạ (giả lập)** vì "
-    "`RAGPipeline.query()` còn là stub — luồng hỏi-đáp thật với LLM cục bộ "
-    "qua OLLAMA sẽ hoàn thiện ở Sprint 3."
-)
+if not pipeline.llm_client.is_available():
+    st.error(
+        f"🔌 Không kết nối được tới OLLAMA server tại "
+        f"`{pipeline.llm_client.base_url}`. Hãy mở terminal và chạy "
+        f"`ollama serve`, đảm bảo model `{pipeline.llm_client.model_name}` đã "
+        f"được `ollama pull` về máy, rồi tải lại trang này."
+    )
+else:
+    st.caption(
+        "ℹ️ Câu trả lời được sinh **thật** từ LLM cục bộ qua OLLAMA — luồng "
+        "Embed → Retrieve → Build Prompt → Generate (Sprint 3)."
+    )
 
 if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = []  # list[(question, RAGResponse)]
 
 for question, response in st.session_state["chat_messages"]:
-    with st.chat_message("user"):
-        st.write(question)
-    with st.chat_message("assistant"):
-        st.write(response.answer)
-        st.caption(
-            f"Model: {response.model_name} · Latency: {response.latency_ms:.1f} ms · "
-            f"Nguồn tham chiếu: {len(response.contexts)}"
-        )
+    chat_widget.render_message(question, response)
 
 question = st.chat_input("Đặt câu hỏi về tài liệu đã index...")
 if question:
-    with st.spinner("Đang xử lý câu hỏi..."):
-        response = pipeline.query(question)
-    st.session_state["chat_messages"].append((question, response))
-    st.rerun()
+    if not pipeline.llm_client.is_available():
+        st.warning(
+            "Không thể gửi câu hỏi vì OLLAMA server hiện không khả dụng — "
+            "hãy khởi động `ollama serve` rồi thử lại."
+        )
+    else:
+        try:
+            with st.spinner("Đang xử lý câu hỏi (embed → truy xuất → soạn câu trả lời)..."):
+                response = pipeline.query(question)
+        except Exception as exc:
+            st.error(f"Có lỗi khi xử lý câu hỏi: {exc}")
+        else:
+            st.session_state["chat_messages"].append((question, response))
+            st.rerun()

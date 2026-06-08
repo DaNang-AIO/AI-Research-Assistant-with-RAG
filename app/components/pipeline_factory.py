@@ -1,11 +1,9 @@
 """Factory tạo `RAGPipeline` dùng chung giữa các trang dashboard.
 
-Sprint 2: `TextChunker`, `OllamaEmbeddingModel`, `ChromaVectorStore` đã có
-triển khai thật (S2-DE-01/02, S2-ME-01/02, S2-DE-03), nên được khởi tạo theo
-cấu hình sidebar — `RAGPipeline.index_document()` giờ chạy luồng thật
-Load → Chunk → Embed → Store và lưu vào ChromaDB persistent storage.
-`PromptBuilder` vẫn là placeholder `None` cho tới khi S3-PE-01 hoàn thiện —
-`RAGPipeline.query()` ở giai đoạn này vẫn là stub và không gọi tới nó.
+Sprint 3: toàn bộ thành phần (`TextChunker`, `OllamaEmbeddingModel`,
+`ChromaVectorStore`, `PromptBuilder`, `OllamaClient`) đã có triển khai thật
+(S2-*, S3-DE-01, S3-PE-01, S3-ME-01), nên `RAGPipeline.query()` giờ chạy luồng
+thật Embed → Retrieve → Build Prompt → Generate với LLM cục bộ qua OLLAMA.
 """
 
 from config.settings import ChromaConfig, ChunkerConfig
@@ -14,6 +12,7 @@ from src.data.loader import DocumentLoader
 from src.embeddings.embedding_model import OllamaEmbeddingModel
 from src.embeddings.vector_store import ChromaVectorStore
 from src.generation.llm_client import OllamaClient
+from src.generation.prompt_builder import PromptBuilder
 from src.models import ChunkStrategy
 from src.pipeline.rag_pipeline import RAGPipeline
 
@@ -41,6 +40,6 @@ def build_pipeline(config: dict) -> RAGPipeline:
             persist_dir=_chroma_defaults.persist_dir,
         ),
         llm_client=OllamaClient(model_name=config["ollama_model"]),
-        prompt_builder=None,
+        prompt_builder=PromptBuilder(),
         top_k=config["top_k"],
     )

@@ -15,7 +15,9 @@ from src.interfaces import (
     BaseLoader,
     BaseVectorStore,
 )
+from src.generation.prompt_builder import PromptBuilder
 from src.models import IndexingResult, RAGResponse
+from src.retrieval.retriever import Retriever
 
 
 class RAGPipeline:
@@ -32,7 +34,7 @@ class RAGPipeline:
         embedding_model: BaseEmbeddingModel,
         vector_store: BaseVectorStore,
         llm_client: BaseLLMClient,
-        prompt_builder: "PromptBuilder",
+        prompt_builder: PromptBuilder,
         top_k: int = 5,
     ):
         self.loader = loader
@@ -42,6 +44,7 @@ class RAGPipeline:
         self.llm_client = llm_client
         self.prompt_builder = prompt_builder
         self.top_k = top_k
+        self.retriever = Retriever(vector_store=vector_store, top_k=top_k)
 
     def index_document(self, file_path: str) -> IndexingResult:
         """Luồng indexing đầy đủ: Load → Chunk → Embed → Store
@@ -84,28 +87,46 @@ class RAGPipeline:
         )
 
     def query(self, question: str) -> RAGResponse:
-        """Stub Sprint 1 — trả về RAGResponse giả lập để dashboard demo
-        Chat Interface trước khi luồng thật hoàn thiện.
+        """Luồng query đầy đủ: Embed(question) → Retrieve → Build Prompt →
+        Generate (pseudocode design.md §2.7, S3-PE-03 — Property 10).
 
-        Luồng thật (Embed câu hỏi → Retrieve → Build Prompt → Generate,
-        đo `latency_ms` — Property 10) sẽ thay thế ở S3-PE-03.
+        Preconditions:
+          - question không rỗng
+          - llm_client.is_available() == True
+
+        `latency_ms` đo trọn vẹn 4 bước (Yêu cầu 7.4) bằng `_measure_latency`.
         """
+        assert question, "question không được rỗng"
+        assert self.llm_client.is_available(), (
+            f"OLLAMA server không khả dụng tại "
+            f"'{getattr(self.llm_client, 'base_url', '?')}' — hãy chạy 'ollama serve'"
+        )
 
-        def _mock_answer() -> str:
-            return (
-                f"[Câu trả lời giả lập] Đây là phản hồi mô phỏng cho câu hỏi: "
-                f"'{question}'. RAGPipeline.query() sẽ sinh câu trả lời thật từ "
-                f"LLM cục bộ qua OLLAMA ở Sprint 3 (S3-PE-03)."
-            )
+        def _answer_with_contexts():
+            # Bước 1: Embed câu hỏi
+            query_vector = self.embedding_model.embed_text(question)
+            assert len(query_vector) == self.embedding_model.dimension
 
-        answer, latency_ms = self._measure_latency(_mock_answer)
-        model_name = getattr(self.llm_client, "model_name", "llama3")
+            # Bước 2: Truy xuất context liên quan (có thể rỗng nếu chưa index)
+            contexts = self.retriever.retrieve(query_vector, k=self.top_k)
+
+            # Bước 3: Xây dựng prompt
+            prompt = self.prompt_builder.build(question, contexts)
+            assert question in prompt
+
+            # Bước 4: Sinh câu trả lời
+            answer = self.llm_client.generate(prompt)
+            assert answer, "LLM trả về câu trả lời rỗng"
+
+            return answer, contexts
+
+        (answer, contexts), latency_ms = self._measure_latency(_answer_with_contexts)
 
         return RAGResponse(
             question=question,
             answer=answer,
-            contexts=[],
-            model_name=model_name,
+            contexts=contexts,
+            model_name=getattr(self.llm_client, "model_name", "llama3"),
             latency_ms=latency_ms,
         )
 

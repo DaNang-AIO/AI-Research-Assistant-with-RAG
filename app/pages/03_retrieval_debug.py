@@ -1,8 +1,9 @@
 """Trang Retrieval Debug — xem chunk truy xuất kèm điểm similarity và vị trí.
 
-Khung điều hướng + cấu hình: S1-PE-01. Nội dung đầy đủ (chunk thật, điểm
-similarity, vị trí trong tài liệu gốc) sẽ hoàn thiện ở S3-PE-05 (Yêu cầu 10.5),
-sau khi `RAGPipeline.query()` truy xuất context thật.
+Khung điều hướng + cấu hình: S1-PE-01. Từ Sprint 3 (S3-PE-05), `RAGPipeline.
+query()` truy xuất context thật từ `ChromaVectorStore.similarity_search()` —
+trang này hiển thị các `ScoredChunk` đó kèm điểm similarity (Property 6-8) và
+vị trí (`start_index`/`end_index`) trong tài liệu gốc (Yêu cầu 10.5).
 """
 
 import sys
@@ -45,12 +46,6 @@ nội dung tài liệu hay không — một phần quan trọng để tin tưở
         """
     )
 
-st.info(
-    "ℹ️ Sprint 1: `RAGPipeline.query()` vẫn là stub và trả về `contexts=[]`, "
-    "nên danh sách bên dưới sẽ trống. Việc hiển thị chunk thật kèm điểm "
-    "similarity và vị trí sẽ hoàn thiện ở Sprint 3 (S3-PE-05)."
-)
-
 messages = st.session_state.get("chat_messages", [])
 if not messages:
     st.write("Chưa có câu hỏi nào được đặt trong phiên này. Hãy thử ở trang **Chat Interface**.")
@@ -60,8 +55,9 @@ else:
 
     if not last_response.contexts:
         st.write(
-            "Câu trả lời gần nhất chưa kèm context (RAGPipeline.query() ở "
-            "Sprint 1 là stub và trả về `contexts=[]`)."
+            "Câu trả lời gần nhất không kèm context nào — có thể vì kho lưu "
+            "trữ vector chưa có tài liệu nào được index (hãy thử ở trang "
+            "**Document Upload** trước), hoặc không tìm thấy đoạn nào đủ liên quan."
         )
     else:
         for scored in last_response.contexts:

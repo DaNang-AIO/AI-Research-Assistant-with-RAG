@@ -49,30 +49,21 @@ Xem [design.md §1.2](specs/rag-research-assistant/design.md) để biết chi t
 
 ## Trạng Thái
 
-Dự án đang ở **Sprint 2 — Kết Nối Ollama & Pipeline Cục Bộ**: đã hoàn thiện cấu hình Ollama, triển khai pipeline index/retrieval cục bộ với nomic-embed-text và Llama 3, tích hợp vào Streamlit và thêm trang debug. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
+Dự án đang ở **Sprint 3 — Thử Nghiệm & Theo Dõi**: Đã hoàn thiện giao diện người dùng với trang Chat Interface (tích hợp OLLAMA) và trang Retrieval Debug. Hệ thống hiện đã có thể thực hiện end-to-end RAG pipeline: nạp tài liệu, tìm kiếm ngữ nghĩa, sinh câu trả lời và hiển thị nguồn tham chiếu chi tiết. Các tính năng experiment tracking và evaluation đều đã sẵn sàng. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
 
-## Cách kiểm tra Sprint 2 trên giao diện Streamlit
-
-Sprint 2 làm cho trang Document Upload chạy luồng index thật (Load → Chunk → Embed → Store), nên để thấy nó hoạt động bạn cần OLLAMA đang chạy thật sự (mình vừa kiểm tra — hiện OLLAMA chưa chạy trên máy bạn).
-
-### Bước 1 — Khởi động OLLAMA và tải model embedding (mở một terminal riêng):
-
-ollama serve
-ollama pull nomic-embed-text # model embedding mặc định trong config/settings.py
-Có thể cần ollama pull llama3 nếu trang chính (main.py) báo "chưa kết nối" — trang đó cũng kiểm tra trạng thái OLLAMA cho model sinh câu trả lời.
-
-### Bước 2 — Chạy dashboard:
+### Cách kiểm tra trên UI
 
 streamlit run app/main.py
 
-### Bước 3 — Vào trang "📄 Document Upload" ở thanh điều hướng bên trái:
+📄 Document Upload — tải lên một file .txt/.md/.pdf ngắn mà bạn quen nội dung (để dễ đối chiếu kết quả).
 
-Tải lên một file .txt/.md/.pdf — bạn có thể dùng luôn 2 file mẫu vừa được notebook Sprint 2 tạo ra: data/raw/sample_rag_overview.txt và data/raw/sample_chunking_notes.md
+💬 Chat Interface — đặt câu hỏi liên quan đến tài liệu đó. Bạn sẽ thấy:
 
-Sau khi index xong, bạn sẽ thấy 3 chỉ số thật: Số chunks, Doc ID, Collection — đây chính là kết quả từ RAGPipeline.index_document() chạy luồng Sprint 2 (đọc file → TextChunker chia nhỏ → OllamaEmbeddingModel tạo vector → ChromaVectorStore lưu trữ)
+Trang báo "🔌 không kết nối được OLLAMA" nếu ollama serve chưa chạy — chạy nó trước.
 
-Phần "Lịch sử upload trong phiên này" bên dưới ghi lại mọi lần index trong session
+Khi OLLAMA sẵn sàng: câu trả lời thật từ LLM, kèm dòng caption Model: llama3 · Latency: ... ms · Nguồn tham chiếu: N, và một expander "📚 Nguồn tham chiếu" liệt kê các đoạn đã dùng kèm score, doc_id, vị trí.
 
-Kiểm chứng thêm (tuỳ chọn): dữ liệu vector sẽ được lưu persistent tại data/vector_db/ (theo ChromaConfig.persist_dir mặc định) — bạn có thể kiểm tra thư mục này có file mới sau khi upload thành công.
+🔍 Retrieval Debug — mở ngay sau khi hỏi, xem chi tiết từng ScoredChunk (score giảm dần trong [0,1], vị trí start_index:end_index, nội dung đầy đủ) — chính là context đã được dùng để tạo câu trả lời ở bước 2.
+Đổi Top-K hoặc LLM Model ở sidebar rồi hỏi lại để thấy kết quả thay đổi theo thời gian thực.
 
 Link web: https://ai-research-assistant-with-rag-tnieqozgdhfzsrhujiz9bu.streamlit.app/

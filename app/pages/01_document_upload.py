@@ -58,6 +58,15 @@ st.caption(
 if "indexing_history" not in st.session_state:
     st.session_state["indexing_history"] = []
 
+st.info(
+    "📦 **Giới hạn dung lượng: tối đa 200MB mỗi file** (giới hạn mặc định của "
+    "Streamlit, hiển thị ngay trong khung tải file bên dưới). Nếu tài liệu "
+    "của bạn lớn hơn, hệ thống sẽ **từ chối ngay khi bạn chọn file** — hãy "
+    "chia tài liệu thành nhiều phần nhỏ hơn rồi tải lên lần lượt. Ngay cả với "
+    "file trong giới hạn, tài liệu càng dài thì bước tạo embedding càng mất "
+    "nhiều thời gian (mỗi đoạn nhỏ — chunk — cần một lượt gọi tới OLLAMA)."
+)
+
 uploaded_file = st.file_uploader(
     "Chọn tài liệu", type=["pdf", "txt", "md", "markdown"]
 )
