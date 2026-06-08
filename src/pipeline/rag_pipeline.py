@@ -1,12 +1,14 @@
 """RAGPipeline (design.md §2.3, §2.7) — orchestrator trung tâm của hệ thống.
 
 Triển khai: S1-PE-02 (khung + stub index_document/query để dashboard demo
-luồng giả lập), S2-PE-01 (index_document/index_directory thật), và
-S3-PE-03 (query thật — Property 10).
+luồng giả lập), S2-PE-01 (index_document/index_directory thật), S3-PE-03
+(query thật — Property 10), và S4-PE-04 (tích hợp `ExperimentTracker`:
+gọi `log_indexing`/`log_query` sau mỗi lần indexing/query thành công, không
+làm gián đoạn luồng chính nếu việc ghi log gặp lỗi — Yêu cầu 8.1, 8.2).
 """
 
 import time
-from typing import List
+from typing import List, Optional
 
 from src.interfaces import (
     BaseChunker,
@@ -17,6 +19,7 @@ from src.interfaces import (
 )
 from src.generation.prompt_builder import PromptBuilder
 from src.models import IndexingResult, RAGResponse
+from src.pipeline.experiment_tracker import ExperimentTracker
 from src.retrieval.retriever import Retriever
 
 
@@ -36,6 +39,7 @@ class RAGPipeline:
         llm_client: BaseLLMClient,
         prompt_builder: PromptBuilder,
         top_k: int = 5,
+        experiment_tracker: Optional[ExperimentTracker] = None,
     ):
         self.loader = loader
         self.chunker = chunker
@@ -45,6 +49,7 @@ class RAGPipeline:
         self.prompt_builder = prompt_builder
         self.top_k = top_k
         self.retriever = Retriever(vector_store=vector_store, top_k=top_k)
+        self.experiment_tracker = experiment_tracker
 
     def index_document(self, file_path: str) -> IndexingResult:
         """Luồng indexing đầy đủ: Load → Chunk → Embed → Store
@@ -54,7 +59,8 @@ class RAGPipeline:
         đã tạo luôn khớp số chunk đã xử lý, không chunk nào bị bỏ sót.
         """
         collection_name = getattr(self.vector_store, "collection_name", "rag_collection")
-        try:
+
+        def _load_chunk_embed_store():
             document = self.loader.load(file_path)
             assert document.content, (
                 "Tài liệu không có nội dung văn bản trích xuất được "
@@ -70,6 +76,12 @@ class RAGPipeline:
                 vectors.append(self.embedding_model.embed_text(chunk.content))
 
             success = self.vector_store.add(chunks, vectors)
+            return document, chunks, success
+
+        try:
+            (document, chunks, success), latency_ms = self._measure_latency(
+                _load_chunk_embed_store
+            )
         except Exception as exc:
             return IndexingResult(
                 doc_id="",
@@ -78,6 +90,8 @@ class RAGPipeline:
                 success=False,
                 error_message=str(exc),
             )
+
+        self._log_indexing_safely(document=document, chunks=chunks, latency_ms=latency_ms)
 
         return IndexingResult(
             doc_id=document.doc_id,
@@ -121,6 +135,10 @@ class RAGPipeline:
             return answer, contexts
 
         (answer, contexts), latency_ms = self._measure_latency(_answer_with_contexts)
+
+        self._log_query_safely(
+            question=question, contexts=contexts, answer=answer, latency_ms=latency_ms
+        )
 
         return RAGResponse(
             question=question,
@@ -175,3 +193,43 @@ class RAGPipeline:
         result = func(*args, **kwargs)
         latency_ms = (time.perf_counter() - start_time) * 1000
         return result, latency_ms
+
+    def _log_indexing_safely(self, document, chunks: List, latency_ms: float) -> None:
+        """Ghi sự kiện indexing vào `ExperimentTracker` (nếu có cấu hình).
+
+        S4-PE-04 (Yêu cầu 8.1): lỗi khi ghi log (vd. không ghi được file
+        session) không được làm gián đoạn luồng `index_document()` chính —
+        vì vậy mọi exception ở đây bị nuốt có chủ đích.
+        """
+        if self.experiment_tracker is None:
+            return
+        try:
+            strategy = getattr(self.chunker, "strategy", None)
+            self.experiment_tracker.log_indexing(
+                doc_id=document.doc_id,
+                chunk_strategy=strategy.value if strategy is not None else "unknown",
+                chunk_size=getattr(self.chunker, "chunk_size", 0),
+                num_chunks=len(chunks),
+                latency_ms=latency_ms,
+            )
+        except Exception:
+            pass
+
+    def _log_query_safely(self, question: str, contexts: List, answer: str, latency_ms: float) -> None:
+        """Ghi sự kiện query vào `ExperimentTracker` (nếu có cấu hình).
+
+        S4-PE-04 (Yêu cầu 8.2): cùng nguyên tắc với `_log_indexing_safely` —
+        không làm gián đoạn luồng `query()` chính nếu việc ghi log thất bại.
+        """
+        if self.experiment_tracker is None:
+            return
+        try:
+            self.experiment_tracker.log_query(
+                question=question,
+                top_k=self.top_k,
+                contexts=contexts,
+                answer=answer,
+                latency_ms=latency_ms,
+            )
+        except Exception:
+            pass

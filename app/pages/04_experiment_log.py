@@ -1,11 +1,10 @@
 """Trang Experiment Log — lịch sử các sự kiện thực nghiệm (indexing/query).
 
-Khung điều hướng + cấu hình: S1-PE-01. Component `metrics_widget` và việc
-hiển thị dữ liệu thật từ `ExperimentTracker` theo thứ tự thời gian sẽ hoàn
-thiện ở S4-PE-05 (Yêu cầu 10.6), sau khi `ExperimentTracker` được tích hợp
-vào `RAGPipeline` (S4-PE-04). Ở Sprint 1, trang chỉ tổng hợp tạm thời các sự
-kiện đã xảy ra trong phiên (từ Document Upload và Chat Interface) để minh hoạ
-luồng điều hướng.
+Khung điều hướng + cấu hình: S1-PE-01. Triển khai S4-PE-05 (Yêu cầu 10.6):
+hiển thị dữ liệu thật từ `ExperimentTracker` (được `RAGPipeline` ghi lại tự
+động qua `log_indexing`/`log_query` ở S4-PE-04) — gồm thống kê tổng hợp
+(`get_summary()`), dòng thời gian sự kiện, và so sánh hai phiên đã lưu
+(`save_session`/`load_session`/`compare_sessions`).
 """
 
 import sys
@@ -17,11 +16,14 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
+from app.components.metrics_widget import render_comparison, render_summary, render_timeline
+from app.components.pipeline_factory import get_experiment_tracker
 from app.components.sidebar import render_sidebar_config
 
 st.set_page_config(page_title="Experiment Log", page_icon="📊", layout="wide")
 
 config = render_sidebar_config()
+tracker = get_experiment_tracker()
 
 st.title("📊 Experiment Log")
 st.markdown(
@@ -49,35 +51,64 @@ hình sidebar khác nhau, rồi quay lại đây để so sánh!
         """
     )
 
-st.info(
-    "ℹ️ Sprint 1: trang chỉ tổng hợp tạm thời các sự kiện trong phiên hiện "
-    "tại (từ Document Upload và Chat Interface). Việc hiển thị lịch sử đầy đủ "
-    "từ `ExperimentTracker` (lưu lại giữa các phiên) sẽ hoàn thiện ở Sprint 4 (S4-PE-05)."
+st.subheader("📈 Thống kê phiên hiện tại")
+render_summary(tracker.get_summary())
+
+st.divider()
+st.subheader("🕒 Dòng thời gian sự kiện")
+st.caption(
+    "Mỗi lần bạn upload tài liệu (Document Upload) hoặc đặt câu hỏi (Chat "
+    "Interface), `RAGPipeline` tự động gọi `ExperimentTracker.log_indexing()` "
+    "/ `log_query()` — không cần thao tác gì thêm ở đây."
+)
+render_timeline(tracker._current_session)
+
+st.divider()
+st.subheader("💾 Lưu & so sánh phiên (`save_session` / `compare_sessions`)")
+st.caption(
+    "Lưu phiên hiện tại ra file JSON (round-trip qua `save_session`/"
+    "`load_session` — Property 11), rồi so sánh hai phiên đã lưu để xem "
+    "cấu hình nào cho kết quả tốt hơn."
 )
 
-indexing_history = st.session_state.get("indexing_history", [])
-chat_messages = st.session_state.get("chat_messages", [])
+col_save, col_compare = st.columns(2)
 
-col1, col2 = st.columns(2)
-col1.metric("Tài liệu đã index trong phiên", len(indexing_history))
-col2.metric("Câu hỏi đã đặt trong phiên", len(chat_messages))
-
-if not indexing_history and not chat_messages:
-    st.write(
-        "Chưa có sự kiện nào trong phiên này. Hãy thử upload tài liệu ở "
-        "**Document Upload** hoặc đặt câu hỏi ở **Chat Interface**."
+with col_save:
+    st.markdown("**Lưu phiên hiện tại**")
+    session_name = st.text_input(
+        "Tên phiên",
+        key="experiment_session_name",
+        placeholder="vd: chunk_512_top_k_5",
     )
-else:
-    if indexing_history:
-        st.subheader("📥 Sự kiện indexing")
-        for file_name, result in indexing_history:
-            status = "thành công" if result.success else f"lỗi: {result.error_message}"
-            st.write(f"- **{file_name}** → {result.num_chunks} chunks ({status})")
+    if st.button("💾 Lưu phiên", disabled=not session_name):
+        try:
+            saved_path = tracker.save_session(session_name)
+            st.success(f"Đã lưu phiên `{session_name}` → `{saved_path}`")
+        except Exception as exc:
+            st.error(f"Không lưu được phiên: {exc}")
 
-    if chat_messages:
-        st.subheader("💬 Sự kiện query")
-        for question, response in chat_messages:
-            st.write(
-                f"- `{response.timestamp:%H:%M:%S}` — “{question}” → "
-                f"{response.latency_ms:.1f} ms · {len(response.contexts)} nguồn tham chiếu"
+with col_compare:
+    st.markdown("**So sánh hai phiên đã lưu**")
+    saved_session_names = sorted(
+        path.stem for path in Path(tracker.log_dir).glob("*.json")
+    )
+    if saved_session_names:
+        st.caption("Các phiên đã lưu (gõ đúng tên để so sánh): " + ", ".join(f"`{name}`" for name in saved_session_names))
+    else:
+        st.caption("Chưa có phiên nào được lưu — hãy lưu ít nhất 2 phiên ở cột bên trái trước khi so sánh.")
+    session_a = st.text_input("Phiên A", key="experiment_session_a", placeholder="vd: chunk_256")
+    session_b = st.text_input("Phiên B", key="experiment_session_b", placeholder="vd: chunk_512")
+    if st.button("🔍 So sánh", disabled=not (session_a and session_b)):
+        try:
+            comparison = tracker.compare_sessions(session_a, session_b)
+            st.session_state["experiment_comparison"] = (session_a, session_b, comparison)
+        except Exception as exc:
+            st.error(
+                f"Không so sánh được — kiểm tra lại tên phiên đã được lưu "
+                f"trong `{tracker.log_dir}` chưa. Lỗi: {exc}"
             )
+
+if "experiment_comparison" in st.session_state:
+    saved_a, saved_b, comparison = st.session_state["experiment_comparison"]
+    st.markdown(f"**Kết quả so sánh `{saved_a}` ↔ `{saved_b}`**")
+    render_comparison(comparison, saved_a, saved_b)

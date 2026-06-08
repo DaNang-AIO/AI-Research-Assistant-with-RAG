@@ -4,7 +4,14 @@ Sprint 3: toàn bộ thành phần (`TextChunker`, `OllamaEmbeddingModel`,
 `ChromaVectorStore`, `PromptBuilder`, `OllamaClient`) đã có triển khai thật
 (S2-*, S3-DE-01, S3-PE-01, S3-ME-01), nên `RAGPipeline.query()` giờ chạy luồng
 thật Embed → Retrieve → Build Prompt → Generate với LLM cục bộ qua OLLAMA.
+
+Sprint 4 (S4-PE-04): mỗi `RAGPipeline` được gắn một `ExperimentTracker` dùng
+chung cho cả phiên làm việc — lưu trong `st.session_state` để các sự kiện
+indexing/query tích luỹ xuyên suốt phiên, kể cả khi `build_pipeline()` được
+gọi lại ở mỗi lần Streamlit re-run trang (mỗi trang gọi factory này).
 """
+
+import streamlit as st
 
 from config.settings import ChromaConfig, ChunkerConfig
 from src.data.chunker import TextChunker
@@ -14,10 +21,22 @@ from src.embeddings.vector_store import ChromaVectorStore
 from src.generation.llm_client import OllamaClient
 from src.generation.prompt_builder import PromptBuilder
 from src.models import ChunkStrategy
+from src.pipeline.experiment_tracker import ExperimentTracker
 from src.pipeline.rag_pipeline import RAGPipeline
 
 _chunker_defaults = ChunkerConfig()
 _chroma_defaults = ChromaConfig()
+
+
+def get_experiment_tracker() -> ExperimentTracker:
+    """Lấy (hoặc khởi tạo) `ExperimentTracker` dùng chung cho cả phiên làm việc.
+
+    Trang "Experiment Log" (S4-PE-05) đọc cùng instance này qua
+    `st.session_state["experiment_tracker"]` để hiển thị lịch sử thật.
+    """
+    if "experiment_tracker" not in st.session_state:
+        st.session_state["experiment_tracker"] = ExperimentTracker()
+    return st.session_state["experiment_tracker"]
 
 
 def build_pipeline(config: dict) -> RAGPipeline:
@@ -42,4 +61,5 @@ def build_pipeline(config: dict) -> RAGPipeline:
         llm_client=OllamaClient(model_name=config["ollama_model"]),
         prompt_builder=PromptBuilder(),
         top_k=config["top_k"],
+        experiment_tracker=get_experiment_tracker(),
     )
