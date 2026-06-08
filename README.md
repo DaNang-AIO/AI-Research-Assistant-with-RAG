@@ -53,17 +53,23 @@ Dự án đang ở **Sprint 3 — Thử Nghiệm & Theo Dõi**: Đã hoàn thi�
 
 ### Cách kiểm tra trên UI
 
-streamlit run app/main.py
+Làm cụ thể từng bước với máy của bạn
+Hiện bạn đã có sẵn 1 phiên tên chunk_512_top_k_5. Bạn cần thêm một phiên thứ hai để có cái để so sánh:
 
-📄 Document Upload — tải lên một file .txt/.md/.pdf ngắn mà bạn quen nội dung (để dễ đối chiếu kết quả).
+Bước 1 — Tạo dữ liệu cho phiên thứ 2:
 
-💬 Chat Interface — đặt câu hỏi liên quan đến tài liệu đó. Bạn sẽ thấy:
+Kéo thanh trượt Chunk Size sang một giá trị khác (vd. 256)
+Vào trang Document Upload hoặc Chat Interface, upload tài liệu / đặt câu hỏi vài lần (để có sự kiện mới được ghi log với cấu hình mới này)
+Bước 2 — Lưu phiên thứ 2:
 
-Trang báo "🔌 không kết nối được OLLAMA" nếu ollama serve chưa chạy — chạy nó trước.
+Quay lại trang Experiment Log
+Trong ô "Tên phiên" (cột trái, "Lưu phiên hiện tại"), gõ một tên mới, vd: chunk_256_top_k_6
+Bấm nút "💾 Lưu phiên"
+→ Bây giờ bạn có 2 file: chunk_512_top_k_5.json và chunk_256_top_k_6.json
+Bước 3 — So sánh (cột phải):
 
-Khi OLLAMA sẵn sàng: câu trả lời thật từ LLM, kèm dòng caption Model: llama3 · Latency: ... ms · Nguồn tham chiếu: N, và một expander "📚 Nguồn tham chiếu" liệt kê các đoạn đã dùng kèm score, doc_id, vị trí.
+Ô "Phiên A": gõ chunk_512_top_k_5 (gõ y hệt, không có .json)
+Ô "Phiên B": gõ chunk_256_top_k_6
+Bấm "🔍 So sánh"
 
-🔍 Retrieval Debug — mở ngay sau khi hỏi, xem chi tiết từng ScoredChunk (score giảm dần trong [0,1], vị trí start_index:end_index, nội dung đầy đủ) — chính là context đã được dùng để tạo câu trả lời ở bước 2.
-Đổi Top-K hoặc LLM Model ở sidebar rồi hỏi lại để thấy kết quả thay đổi theo thời gian thực.
-
-Link web: https://ai-research-assistant-with-rag-z4by6bembkrbwqzuphdoi32r.streamlit.app/
+Link web: https://ai-research-assistant-with-rag-5zbwnhwqirbkmdui4ejijh.streamlit.app/
