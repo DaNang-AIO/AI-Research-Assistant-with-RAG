@@ -49,4 +49,4 @@ Xem [design.md §1.2](specs/rag-research-assistant/design.md) để biết chi t
 
 ## Trạng Thái
 
-Dự án đang ở **Sprint 2 — Pipeline Engineering**: Đã tích hợp Ollama cho cả retrieval và generation, xây dựng thành công 4 trang Streamlit (Upload, Chat, Retrieval Debug, Experiment Log). Hệ thống đã có thể thực hiện end-to-end RAG pipeline với khả năng upload tài liệu, chunking, embedding, lưu trữ vector và chat trả lời thông qua UI. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
+Dự án đang ở **Sprint 0 — Khởi Tạo & Nền Tảng**: đã có khung thư mục, data models, interfaces (ABC) và cấu hình dùng chung. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
