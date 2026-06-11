@@ -30,3 +30,4 @@ experiments/results/*
 # IDE
 .vscode/
 .idea/
+.gstack/
