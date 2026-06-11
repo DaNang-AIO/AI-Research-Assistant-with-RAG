@@ -96,3 +96,22 @@ pytest tests/ -v
 - Cấu hình được nạp qua biến môi trường: `AppConfig.from_env()` đọc từ `.env` (xem [.env.example](.env.example) — đã có sẵn các biến mặc định, copy thành `.env` để tuỳ chỉnh) và dùng giá trị mặc định hợp lý khi biến môi trường không được định nghĩa; danh sách model OLLAMA được hỗ trợ nằm trong [config/models.yaml](config/models.yaml).
 - Các notebook phải chạy được từ đầu đến cuối mà không gặp lỗi ngoại lệ chưa xử lý, và được kỳ vọng sử dụng `ExperimentTracker` để ghi lại kết quả thực nghiệm mà không làm gián đoạn luồng notebook.
 - Streamlit dashboard có đúng 4 trang (Document Upload, Chat Interface, Retrieval Debug, Experiment Log), được điều khiển bởi cấu hình sidebar dùng chung (LLM model, embedding model, chunk size, top-k) lưu trong `st.session_state`.
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore
+- Author a backlog-ready spec/issue → invoke /spec
