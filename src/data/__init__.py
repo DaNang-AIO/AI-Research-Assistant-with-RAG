@@ -1,0 +1,1 @@
+# Module data — nạp classes cụ thể khi cần (tránh import-time dependencies)
