@@ -33,14 +33,14 @@ class OllamaClient(BaseLLMClient):
         Gọi OLLAMA /api/generate endpoint, trả về text hoàn chỉnh
         """
         raise NotImplementedError(
-            "OllamaClient.generate() sex trieenr khai owr Sprint 3")
+            "OllamaClient.generate() được triển khai ở Sprint 3")
 
     def generate_stream(self, prompt: str):
         """
         Generator — yield từng token khi OLLAMA stream response
         """
         raise NotImplementedError(
-            "OllamaClient.generate() sex trieenr khai owr Sprint 3")
+            "OllamaClient.generate() được triển khai ở Sprint 3")
 
     def is_available(self) -> bool:
         """
