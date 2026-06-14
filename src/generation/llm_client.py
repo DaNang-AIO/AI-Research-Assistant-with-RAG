@@ -3,9 +3,9 @@
 Triển khai: S1-ME-01 (is_available, list_models), S3-ME-01 (generate,
 _build_request_body) và S3-ME-02 (generate_stream).
 """
-
-import urllib
 import json
+import urllib.request
+import urllib.error
 from typing import List, Any, Dict
 from src.interfaces import BaseLLMClient
 
@@ -31,20 +31,22 @@ class OllamaClient(BaseLLMClient):
     def generate(self, prompt: str, **kwargs) -> str:
         """
         Gọi OLLAMA /api/generate endpoint, trả về text hoàn chỉnh
-        Waitting for Sprint 3
         """
-        pass
+        raise NotImplementedError(
+            "OllamaClient.generate() sex trieenr khai owr Sprint 3")
 
     def generate_stream(self, prompt: str):
         """
         Generator — yield từng token khi OLLAMA stream response
-        Waitting for Sprint 3
         """
-        pass
+        raise NotImplementedError(
+            "OllamaClient.generate() sex trieenr khai owr Sprint 3")
 
     def is_available(self) -> bool:
         """
-        Ping OLLAMA server, trả về True nếu đang chạy
+        Ping OLLAMA server, trả về True nếu đang chạy.
+        Không bao giờ ném exception dù server không chạy (Yêu cầu 5.2).
+        Dùng GET /api/tags — endpoint nhẹ nhất OLLAMA luôn expose.
         """
 
         try:
@@ -60,6 +62,12 @@ class OllamaClient(BaseLLMClient):
     def list_models(self) -> List[str]:
         """
         Lấy danh sách models đã pull về OLLAMA
+        Không bao giờ ném exception — trả về [] khi server không chạy
+        hoặc response không hợp lệ, đảm bảo notebook chạy an toàn (Yêu cầu 9.4).
+
+        Returns:
+            List[str] — tên các model, ví dụ ["llama3:latest", "mistral:latest"].
+                        Trả về [] nếu server không chạy hoặc chưa pull model nào.
         """
 
         url = f"{self.base_url}/api/tags"
@@ -69,19 +77,14 @@ class OllamaClient(BaseLLMClient):
             with urllib.request.urlopen(req, timeout=10) as reponse:
                 raw = reponse.read().decode("utf-8")
 
-        except urllib.error.URLError as e:
-            raise ConnectionError(
-                f"Không kết nối được với OLLAMA server tại {self.base_url}: {e}"
-            ) from e
+        except urllib.error.URLError:
+            return []
 
         try:
             data: Dict[str, Any] = json.loads(raw)
             return [m["name"] for m in data.get("models", [])]
-
-        except (json.JSONDecodeError, KeyError) as e:
-            raise RuntimeError(
-                f"Reponse từ OLLAMA không hợp lệ: {e}\nRaw: {raw[:200]} "
-            ) from e
+        except (json.JSONDecodeError, KeyError):
+            return []
 
     def _build_request_body(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Xây dựng JSON body cho API request"""
