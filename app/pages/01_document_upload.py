@@ -14,7 +14,14 @@ if _PROJECT_ROOT not in sys.path:
 import time
 import streamlit as st
 
-from src.models import IndexingResult
+from src.models import IndexingResult, ChunkStrategy
+from src.data.loader import DocumentLoader
+from src.data.chunker import TextChunker
+from src.embeddings.embedding_model import OllamaEmbeddingModel
+from src.embeddings.vector_store import ChromaVectorStore
+from src.generation.llm_client import OllamaClient
+from src.generation.prompt_builder import PromptBuilder
+from src.pipeline.rag_pipeline import RAGPipeline
 
 st.set_page_config(
     page_title="Document Upload — RAG Research",
@@ -54,25 +61,6 @@ st.markdown(
 )
 
 
-def _stub_index_document(file_name: str, config: dict) -> IndexingResult:
-    """
-    STUB cho Sprint 1: Giả lập IndexingResult.
-    Sprint 2 (S2-PE-01): thay bằng RAGPipeline.index_document() thật.
-    """
-    import hashlib
-    time.sleep(0.8)  # giả lập độ trễ xử lý
-    doc_id = hashlib.md5(file_name.encode()).hexdigest()[:12]
-    # Ước lượng số chunk dựa trên chunk_size (giả lập)
-    fake_num_chunks = max(1, int(1000 / config.get("chunk_size", 512)) + 3)
-    return IndexingResult(
-        doc_id=doc_id,
-        num_chunks=fake_num_chunks,
-        collection_name="rag_collection",
-        success=True,
-        error_message=None,
-    )
-
-
 def main() -> None:
     # ── Đảm bảo config đã được khởi tạo ────────────────────────────────────
     if "config" not in st.session_state:
@@ -90,6 +78,34 @@ def main() -> None:
 
     cfg = st.session_state["config"]
 
+    # ── Khởi tạo RAGPipeline và các component ──────────────────────────────
+    loader = DocumentLoader()
+    chunker = TextChunker(
+        strategy=ChunkStrategy.RECURSIVE,
+        chunk_size=cfg.get("chunk_size", 512),
+        chunk_overlap=cfg.get("chunk_overlap", 50),
+    )
+    embedding_model = OllamaEmbeddingModel(
+        model_name=cfg.get("embedding_model", "nomic-embed-text")
+    )
+    vector_store = ChromaVectorStore(
+        collection_name="rag_collection"
+    )
+    llm_client = OllamaClient(
+        model_name=cfg.get("ollama_model", "llama3")
+    )
+    prompt_builder = PromptBuilder()
+
+    pipeline = RAGPipeline(
+        loader=loader,
+        chunker=chunker,
+        embedding_model=embedding_model,
+        vector_store=vector_store,
+        llm_client=llm_client,
+        prompt_builder=prompt_builder,
+        top_k=cfg.get("top_k", 5),
+    )
+
     st.title("📄 Document Upload")
     st.markdown(
         "Upload tài liệu **(PDF, TXT, Markdown)** để index vào ChromaDB. "
@@ -98,9 +114,9 @@ def main() -> None:
 
     # ── Thông báo Sprint 1 (stub) ────────────────────────────────────────────
     st.info(
-        "⚠️ **Sprint 1 — Demo mode:** `index_document()` đang dùng stub giả lập. "
-        "Dữ liệu thật sẽ được index từ Sprint 2 (S2-PE-01).",
-        icon="🔧",
+        "ℹ️ **Sprint 1 — RAGPipeline integrated:** `index_document()` được gọi qua pipeline thật tích hợp với `DocumentLoader` chạy thật. "
+        "Các công đoạn chia nhỏ, vector hóa và lưu trữ (ChromaDB) đang ở chế độ stub và sẽ được hoàn thiện ở Sprint 2.",
+        icon="ℹ️",
     )
 
     st.markdown("---")
@@ -139,14 +155,26 @@ def main() -> None:
             results = []
             progress = st.progress(0, text="Đang khởi tạo...")
 
+            # Đảm bảo thư mục lưu trữ file gốc vật lý tồn tại (design.md §1.2)
+            os.makedirs("data/raw", exist_ok=True)
+
             for i, uploaded_file in enumerate(uploaded_files):
                 progress.progress(
                     (i) / len(uploaded_files),
                     text=f"Đang xử lý: `{uploaded_file.name}` ({i+1}/{len(uploaded_files)})",
                 )
 
+                # Lưu file vật lý vào thư mục data/raw/
+                file_path = os.path.join("data/raw", uploaded_file.name)
+                try:
+                    with open(file_path, "wb") as temp_file:
+                        temp_file.write(uploaded_file.getbuffer())
+                except Exception as e:
+                    st.error(f"Không thể ghi file {uploaded_file.name} lên ổ đĩa: {e}")
+                    continue
+
                 with st.spinner(f"Indexing `{uploaded_file.name}`..."):
-                    result = _stub_index_document(uploaded_file.name, cfg)
+                    result = pipeline.index_document(file_path)
                     results.append((uploaded_file.name, result))
 
                     # Thêm vào danh sách tài liệu đã index
