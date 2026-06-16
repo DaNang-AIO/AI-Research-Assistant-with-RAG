@@ -4,6 +4,7 @@ Triển khai: S3-PE-04 — component hiển thị câu trả lời và danh sác
 Có thể import và dùng tại nhiều trang Streamlit khác nhau.
 """
 
+import html
 import streamlit as st
 from typing import List, Optional
 
@@ -26,9 +27,9 @@ def render_rag_response(response: RAGResponse, show_contexts: bool = True) -> No
             border-radius:16px 16px 16px 4px; padding:16px 20px; color:#e2e8f0;
         ">
             <div style="font-size:12px; color:#64748b; margin-bottom:6px">
-                🤖 {response.model_name} · ⏱ {response.latency_ms:.0f} ms
+                🤖 {html.escape(response.model_name)} · ⏱ {response.latency_ms:.0f} ms
             </div>
-            {response.answer}
+            {html.escape(response.answer)}
         </div>
         """,
         unsafe_allow_html=True,
@@ -112,7 +113,7 @@ def render_chat_message(role: str, content: str, timestamp: Optional[str] = None
         prefix = "🤖 <strong>Assistant</strong>"
 
     ts_html = (
-        f'<div style="font-size:11px;color:#64748b;margin-top:4px">{timestamp}</div>'
+        f'<div style="font-size:11px;color:#64748b;margin-top:4px">{html.escape(timestamp)}</div>'
         if timestamp
         else ""
     )
@@ -121,7 +122,7 @@ def render_chat_message(role: str, content: str, timestamp: Optional[str] = None
         f"""
         <div style="{bubble_style} padding:12px 16px; color:#e2e8f0;">
             <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">{prefix}</div>
-            {content}
+            {html.escape(content)}
             {ts_html}
         </div>
         """,

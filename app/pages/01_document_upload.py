@@ -11,6 +11,8 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import html
+import datetime
 import time
 import streamlit as st
 
@@ -24,34 +26,34 @@ st.set_page_config(
 
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-    .upload-card {
-        background: linear-gradient(135deg, #1e3a5f22, #3b82f622);
-        border: 1px dashed #3b82f688;
-        border-radius: 16px;
-        padding: 32px;
-        text-align: center;
-    }
-    .result-card {
-        background: #0f2a1a;
-        border: 1px solid #22c55e44;
-        border-radius: 12px;
-        padding: 16px;
-        margin: 8px 0;
-    }
-    .error-card {
-        background: #2a0f0f;
-        border: 1px solid #ef444444;
-        border-radius: 12px;
-        padding: 16px;
-        margin: 8px 0;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# st.markdown(
+#     """
+#     <style>
+#     .upload-card {
+#         background: linear-gradient(135deg, #1e3a5f22, #3b82f622);
+#         border: 1px dashed #3b82f688;
+#         border-radius: 16px;
+#         padding: 32px;
+#         text-align: center;
+#     }
+#     .result-card {
+#         background: #0f2a1a;
+#         border: 1px solid #22c55e44;
+#         border-radius: 12px;
+#         padding: 16px;
+#         margin: 8px 0;
+#     }
+#     .error-card {
+#         background: #2a0f0f;
+#         border: 1px solid #ef444444;
+#         border-radius: 12px;
+#         padding: 16px;
+#         margin: 8px 0;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True,
+# )
 
 
 def _stub_index_document(file_name: str, config: dict) -> IndexingResult:
@@ -74,19 +76,14 @@ def _stub_index_document(file_name: str, config: dict) -> IndexingResult:
 
 
 def main() -> None:
-    # ── Đảm bảo config đã được khởi tạo ────────────────────────────────────
-    if "config" not in st.session_state:
-        st.session_state["config"] = {
-            "ollama_model": "llama3",
-            "embedding_model": "nomic-embed-text",
-            "chunk_size": 512,
-            "chunk_overlap": 50,
-            "top_k": 5,
-        }
+    # ── Đảm bảo indexed_docs và indexing_results đã được khởi tạo ───────────
     if "indexed_docs" not in st.session_state:
         st.session_state["indexed_docs"] = []
     if "indexing_results" not in st.session_state:
         st.session_state["indexing_results"] = []
+
+    if "config" not in st.session_state:
+        st.session_state["config"] = {}
 
     cfg = st.session_state["config"]
 
@@ -147,7 +144,8 @@ def main() -> None:
 
                 with st.spinner(f"Indexing `{uploaded_file.name}`..."):
                     result = _stub_index_document(uploaded_file.name, cfg)
-                    results.append((uploaded_file.name, result))
+                    ts = datetime.datetime.now().strftime("%H:%M:%S")
+                    results.append((uploaded_file.name, result, ts))
 
                     # Thêm vào danh sách tài liệu đã index
                     if result.success and uploaded_file.name not in st.session_state["indexed_docs"]:
@@ -160,7 +158,7 @@ def main() -> None:
             st.markdown("---")
             st.subheader("📊 Kết quả Indexing")
 
-            success_count = sum(1 for _, r in results if r.success)
+            success_count = sum(1 for _, r, _ts in results if r.success)
             fail_count = len(results) - success_count
 
             c1, c2, c3 = st.columns(3)
@@ -168,15 +166,15 @@ def main() -> None:
             c2.metric("❌ Thất bại", fail_count)
             c3.metric(
                 "📦 Tổng số chunk",
-                sum(r.num_chunks for _, r in results if r.success),
+                sum(r.num_chunks for _, r, _ts in results if r.success),
             )
 
-            for file_name, result in results:
+            for file_name, result, _ts in results:
                 if result.success:
                     st.markdown(
                         f"""
                         <div class="result-card">
-                            <strong>✅ {file_name}</strong><br/>
+                            <strong>\u2705 {html.escape(file_name)}</strong><br/>
                             <small>
                                 Doc ID: <code>{result.doc_id}</code> &nbsp;|&nbsp;
                                 Chunks: <strong>{result.num_chunks}</strong> &nbsp;|&nbsp;
@@ -190,8 +188,8 @@ def main() -> None:
                     st.markdown(
                         f"""
                         <div class="error-card">
-                            <strong>❌ {file_name}</strong><br/>
-                            <small>Lỗi: {result.error_message}</small>
+                            <strong>\u274c {html.escape(file_name)}</strong><br/>
+                            <small>L\u1ed7i: {html.escape(result.error_message or "")}</small>
                         </div>
                         """,
                         unsafe_allow_html=True,

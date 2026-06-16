@@ -209,7 +209,7 @@ def main() -> None:
         for i, sc in enumerate(filtered):
             _render_chunk_card(sc, i)
     else:
-        st.info("ℹ️ Không có chunk nào được truy xuất cho câu hỏi này.")
+        st.info("[INFO] Không có chunk nào được truy xuất cho câu hỏi này.")
 
     # ── Phân tích phân bố score ──────────────────────────────────────────────
     if contexts:

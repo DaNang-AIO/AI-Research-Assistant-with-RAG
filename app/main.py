@@ -25,37 +25,37 @@ st.set_page_config(
 )
 
 # ── CSS tuỳ chỉnh ────────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-    /* Màu nền sidebar */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    }
-    [data-testid="stSidebar"] * {
-        color: #e2e8f0 !important;
-    }
-    /* Badge trạng thái */
-    .status-badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .status-ok   { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
-    .status-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
-    .status-err  { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# st.markdown(
+#     """
+#     <style>
+#     /* Màu nền sidebar */
+#     [data-testid="stSidebar"] {
+#         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+#     }
+#     [data-testid="stSidebar"] * {
+#         color: #e2e8f0 !important;
+#     }
+#     /* Badge trạng thái */
+#     .status-badge {
+#         display: inline-block;
+#         padding: 2px 10px;
+#         border-radius: 12px;
+#         font-size: 12px;
+#         font-weight: 600;
+#     }
+#     .status-ok   { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+#     .status-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+#     .status-err  { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
+#     </style>
+#     """,
+#     unsafe_allow_html=True,
+# )
 
 
 def _init_session_defaults() -> None:
     """Khởi tạo session_state với giá trị mặc định từ AppConfig nếu chưa có."""
     if "config" not in st.session_state:
-        default = AppConfig()
+        default = AppConfig.from_env()
         st.session_state["config"] = {
             "ollama_model": default.ollama.default_llm_model,
             "embedding_model": default.ollama.default_embedding_model,

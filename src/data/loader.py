@@ -6,7 +6,6 @@ Triển khai: S1-DE-01 (txt/md, load_directory) và S1-DE-02 (PDF + xử lý l�
 import os
 import hashlib
 from typing import Dict, List
-import fitz         # PyMuPDF
 from pathlib import Path
 
 from src.interfaces import BaseLoader
@@ -18,6 +17,12 @@ class PDFLoader:
         self.file_path = file_path
 
     def load(self) -> str:
+        try:
+            import fitz  # PyMuPDF — lazy import để không fail khi module chưa cài
+        except ImportError:
+            raise ImportError(
+                "PyMuPDF (fitz) chưa được cài — chạy: pip install PyMuPDF"
+            )
         text = ""
         # Sử dụng context manager (with) để tự động đóng file sau khi đọc xong
         with fitz.open(self.file_path) as doc:
