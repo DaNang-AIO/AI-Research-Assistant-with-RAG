@@ -32,6 +32,8 @@ class RAGPipeline:
         prompt_builder: PromptBuilder,
         top_k: int = 5,
     ):
+        if top_k <= 0:
+            raise ValueError("top_k must be > 0")
         self.loader = loader
         self.chunker = chunker
         self.embedding_model = embedding_model
@@ -56,7 +58,7 @@ class RAGPipeline:
           - Số chunks đã embed == số chunks đã xử lý
           - Không có chunk nào bị mất
         """
-        # Precondition
+        # Precondition checks
         if file_path is None:
             raise ValueError("file_path không được để trống (None)")
         if not os.path.isfile(file_path):
@@ -67,23 +69,25 @@ class RAGPipeline:
             raise RuntimeError("Vector_store chưa sẵn sàng")
 
         doc = self.loader.load(file_path)
-        if doc.content is None:
+        if doc is None or doc.content is None:
             raise ValueError(f"File không có nội dung: {file_path}")
-    
-        chunks = self.chunker(doc)
-        if len(chunks)<1:
+
+        chunks = self.chunker.chunk(doc)
+        if not chunks or len(chunks) < 1:
             raise ValueError(f"File không đủ nội dung để tạo chunk: {file_path}")
 
-        vectors = []
+        # Use batch embedding for efficiency and consistency with the interface
+        texts = [c.content for c in chunks]
+        vectors = self.embedding_model.embed_batch(texts)
 
-        for i in range(len(chunks)):
-            assert len(vectors) == i
-            vector = self.embedding_model.embed_text(chunks[i].content)
-            assert len(vector) == self.embedding_model.dimension
-            vectors.append(vector)
-        
-        assert len(vectors) == len(chunks)
-        
+        # Postconditions / validations
+        if len(vectors) != len(chunks):
+            raise RuntimeError("Embedding batch returned unexpected number of vectors")
+        for i, v in enumerate(vectors):
+            if len(v) != self.embedding_model.dimension:
+                raise ValueError(f"Embedding dimension mismatch for chunk index {i}")
+
+        # All vectors validated — store into vector DB
         success = self.vector_store.add(chunks, vectors)
         result = IndexingResult(
             doc_id = doc.doc_id,
@@ -118,7 +122,32 @@ class RAGPipeline:
 
         contexts = self.vector_store.similarity_search(query_vector, k = self.top_k)
 
-        prompt = self.prompt_builder.build(question, contexts)
+        if contexts:
+            context_block = "\n\n".join(
+                # TODO: đổi ctx.content / ctx.score thành đúng field thật của ScoredChunk
+                f"[Đoạn {i + 1}] (độ liên quan: {getattr(ctx, 'score', 0):.3f})\n{getattr(ctx, 'content', ctx)}"
+                for i, ctx in enumerate(contexts)
+            )
+        else:
+            context_block = "(Không tìm thấy đoạn văn bản liên quan nào trong cơ sở dữ liệu.)"  
+
+        # chưa định nghĩa nên sẽ để một prompt theo mẫu
+        # prompt = self.prompt_builder.build(question, contexts)
+        prompt = f"""Bạn là một trợ lý AI trả lời câu hỏi dựa trên tài liệu được cung cấp.
+
+QUY TẮC:
+- Chỉ sử dụng thông tin trong phần "NGỮ CẢNH" dưới đây để trả lời, không dùng kiến thức ngoài tài liệu.
+- Nếu ngữ cảnh không chứa thông tin liên quan, hãy nói rõ là không tìm thấy thông tin trong tài liệu, KHÔNG tự suy diễn hoặc bịa đặt.
+- Trả lời ngắn gọn, chính xác, bằng tiếng Việt.
+- Nếu có thể, chỉ rõ câu trả lời dựa vào đoạn nào (ví dụ: "Theo [Đoạn 2]...").
+
+NGỮ CẢNH:
+{context_block}
+
+CÂU HỎI:
+{question}
+
+TRẢ LỜI:"""
         assert question in prompt
 
         answer, latency_ms = self._measure_latency(self.llm_client.generate, prompt)
