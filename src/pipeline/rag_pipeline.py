@@ -89,7 +89,7 @@ class RAGPipeline:
 
         # All vectors validated — store into vector DB
         success = self.vector_store.add(chunks, vectors)
-        collection_name = getattr(self.vector_store, "collection_name", "default")
+        collection_name = getattr(self.vector_store, "collection_name", None) or "default"
         result = IndexingResult(
             doc_id = doc.doc_id,
             num_chunks = len(chunks),
@@ -124,32 +124,7 @@ class RAGPipeline:
 
         contexts = self.vector_store.similarity_search(query_vector, k = self.top_k)
 
-        if contexts:
-            context_block = "\n\n".join(
-                # TODO: đổi ctx.content / ctx.score thành đúng field thật của ScoredChunk
-                f"[Đoạn {i + 1}] (độ liên quan: {getattr(ctx, 'score', 0):.3f})\n{getattr(ctx, 'content', ctx)}"
-                for i, ctx in enumerate(contexts)
-            )
-        else:
-            context_block = "(Không tìm thấy đoạn văn bản liên quan nào trong cơ sở dữ liệu.)"  
-
-        # chưa định nghĩa nên sẽ để một prompt theo mẫu
-        # prompt = self.prompt_builder.build(question, contexts)
-        prompt = f"""Bạn là một trợ lý AI trả lời câu hỏi dựa trên tài liệu được cung cấp.
-
-QUY TẮC:
-- Chỉ sử dụng thông tin trong phần "NGỮ CẢNH" dưới đây để trả lời, không dùng kiến thức ngoài tài liệu.
-- Nếu ngữ cảnh không chứa thông tin liên quan, hãy nói rõ là không tìm thấy thông tin trong tài liệu, KHÔNG tự suy diễn hoặc bịa đặt.
-- Trả lời ngắn gọn, chính xác, bằng tiếng Việt.
-- Nếu có thể, chỉ rõ câu trả lời dựa vào đoạn nào (ví dụ: "Theo [Đoạn 2]...").
-
-NGỮ CẢNH:
-{context_block}
-
-CÂU HỎI:
-{question}
-
-TRẢ LỜI:"""
+        prompt = self.prompt_builder.build(question, contexts)
         assert question in prompt
 
         answer, latency_ms = self._measure_latency(self.llm_client.generate, prompt)

@@ -20,7 +20,7 @@ class PromptBuilder:
         "ngữ cảnh được cung cấp. Nếu không đủ thông tin, hãy nói rõ."
     )
 
-    def __init__(self, system_prompt: str = None):
+    def __init__(self, system_prompt: str | None = None):
         self.system_prompt = system_prompt or self.DEFAULT_SYSTEM_PROMPT
 
     def build(self, question: str, contexts: List[ScoredChunk]) -> str:
@@ -36,6 +36,8 @@ class PromptBuilder:
           - prompt chứa nội dung của tất cả contexts
           - prompt chứa question (Property 9)
         """
+        if not question or not question.strip():
+            raise ValueError("question không được rỗng")
         ctx_text = self.format_context(contexts)
         return (
             f"{self.system_prompt}\n\n"

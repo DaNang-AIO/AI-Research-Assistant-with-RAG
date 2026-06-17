@@ -5,6 +5,7 @@ Sprint 1: đọc dữ liệu stub từ session_state (indexing_results, chat_his
 Sprint 4: tích hợp ExperimentTracker thật (S4-PE-01..S4-PE-05).
 """
 
+import html
 import streamlit as st
 
 st.set_page_config(
@@ -194,7 +195,7 @@ def main() -> None:
         st.caption(f"Hiển thị {len(filtered_events)}/{len(events)} sự kiện")
         st.markdown("")
 
-        for i, event in enumerate(sorted(filtered_events, key=lambda e: e["timestamp"], reverse=True)):
+        for i, event in enumerate(sorted(filtered_events, key=lambda e: e["timestamp"] if e["timestamp"] != "—" else "", reverse=True)):
             tag_class = "tag-index" if event["type"] == "indexing" else "tag-query"
             tag_label = "INDEXING" if event["type"] == "indexing" else "QUERY"
             status_icon = "✅" if event["success"] else "❌"
@@ -205,11 +206,11 @@ def main() -> None:
                     <div class="log-icon">{event['icon']}</div>
                     <div class="log-body">
                         <div class="log-title">
-                            {status_icon} {event['title']}
+                            {status_icon} {html.escape(event['title'])}
                             &nbsp;<span class="{tag_class}">{tag_label}</span>
                         </div>
                         <div class="log-meta">
-                            ⏰ {event['timestamp']} &nbsp;|&nbsp; {event['details']}
+                            ⏰ {event['timestamp']} &nbsp;|&nbsp; {html.escape(event['details'])}
                         </div>
                     </div>
                 </div>

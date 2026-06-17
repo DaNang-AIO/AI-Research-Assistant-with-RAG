@@ -14,7 +14,7 @@ if _PROJECT_ROOT not in sys.path:
 
 import streamlit as st
 
-from config.settings import AppConfig, OllamaConfig, ChunkerConfig
+from config.settings import AppConfig
 
 # ── Phải gọi set_page_config() ở đầu tiên, trước mọi lệnh st khác ──────────
 st.set_page_config(
@@ -81,23 +81,25 @@ def _render_sidebar() -> None:
         st.header("⚙️ Cấu hình Pipeline")
 
         # ── LLM Model ──────────────────────────────────────────────────────
-        llm_options = ["llama3", "mistral", "gemma"]
+        _llm_presets = ["llama3", "mistral", "gemma"]
         current_llm = st.session_state["config"].get("ollama_model", "llama3")
+        llm_options = _llm_presets if current_llm in _llm_presets else [current_llm] + _llm_presets
         ollama_model = st.selectbox(
             "🤖 LLM Model",
             options=llm_options,
-            index=llm_options.index(current_llm) if current_llm in llm_options else 0,
+            index=llm_options.index(current_llm),
             key="sidebar_llm_model",
             help="Model ngôn ngữ dùng để sinh câu trả lời (chạy cục bộ qua OLLAMA).",
         )
 
         # ── Embedding Model ─────────────────────────────────────────────────
-        emb_options = ["nomic-embed-text", "mxbai-embed-large"]
+        _emb_presets = ["nomic-embed-text", "mxbai-embed-large"]
         current_emb = st.session_state["config"].get("embedding_model", "nomic-embed-text")
+        emb_options = _emb_presets if current_emb in _emb_presets else [current_emb] + _emb_presets
         embedding_model = st.selectbox(
             "🧮 Embedding Model",
             options=emb_options,
-            index=emb_options.index(current_emb) if current_emb in emb_options else 0,
+            index=emb_options.index(current_emb),
             key="sidebar_emb_model",
             help="Model tạo vector embedding cho tài liệu và câu hỏi.",
         )

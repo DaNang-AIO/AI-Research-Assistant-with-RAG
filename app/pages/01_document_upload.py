@@ -83,7 +83,13 @@ def main() -> None:
         st.session_state["indexing_results"] = []
 
     if "config" not in st.session_state:
-        st.session_state["config"] = {}
+        st.session_state["config"] = {
+            "ollama_model": "llama3",
+            "embedding_model": "nomic-embed-text",
+            "chunk_size": 512,
+            "chunk_overlap": 50,
+            "top_k": 5,
+        }
 
     cfg = st.session_state["config"]
 

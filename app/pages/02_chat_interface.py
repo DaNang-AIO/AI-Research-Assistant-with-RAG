@@ -11,6 +11,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import html
 import time
 import datetime
 import streamlit as st
@@ -23,44 +24,44 @@ st.set_page_config(
     layout="wide",
 )
 
-# ── CSS ──────────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-    .chat-user {
-        background: linear-gradient(135deg, #1e3a5f, #1e40af);
-        border-radius: 16px 16px 4px 16px;
-        padding: 12px 16px;
-        margin: 4px 60px 4px 0;
-        color: #e2e8f0;
-    }
-    .chat-assistant {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 16px 16px 16px 4px;
-        padding: 12px 16px;
-        margin: 4px 0 4px 60px;
-        color: #e2e8f0;
-    }
-    .source-badge {
-        display: inline-block;
-        background: #1e3a5f;
-        border: 1px solid #3b82f644;
-        border-radius: 8px;
-        padding: 4px 10px;
-        font-size: 12px;
-        color: #93c5fd;
-        margin: 2px;
-    }
-    .latency-tag {
-        font-size: 11px;
-        color: #64748b;
-        margin-top: 6px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# # ── CSS ──────────────────────────────────────────────────────────────────────
+# st.markdown(
+#     """
+#     <style>
+#     .chat-user {
+#         background: linear-gradient(135deg, #1e3a5f, #1e40af);
+#         border-radius: 16px 16px 4px 16px;
+#         padding: 12px 16px;
+#         margin: 4px 60px 4px 0;
+#         color: #e2e8f0;
+#     }
+#     .chat-assistant {
+#         background: #1e293b;
+#         border: 1px solid #334155;
+#         border-radius: 16px 16px 16px 4px;
+#         padding: 12px 16px;
+#         margin: 4px 0 4px 60px;
+#         color: #e2e8f0;
+#     }
+#     .source-badge {
+#         display: inline-block;
+#         background: #1e3a5f;
+#         border: 1px solid #3b82f644;
+#         border-radius: 8px;
+#         padding: 4px 10px;
+#         font-size: 12px;
+#         color: #93c5fd;
+#         margin: 2px;
+#     }
+#     .latency-tag {
+#         font-size: 11px;
+#         color: #64748b;
+#         margin-top: 6px;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True,
+# )
 
 
 def _stub_rag_query(question: str, config: dict) -> RAGResponse:
@@ -86,7 +87,7 @@ def _stub_rag_query(question: str, config: dict) -> RAGResponse:
             score=round(0.95 - i * 0.08, 2),
             rank=i + 1,
         )
-        for i in range(min(config.get("top_k", 3), 3))
+        for i in range(config.get("top_k", 3))
     ]
 
     fake_answer = (
@@ -109,14 +110,15 @@ def _stub_rag_query(question: str, config: dict) -> RAGResponse:
 
 def _render_message(role: str, content: str) -> None:
     """Render một tin nhắn trong khung chat."""
+    safe_content = html.escape(content)
     if role == "user":
         st.markdown(
-            f'<div class="chat-user">👤 <strong>Bạn</strong><br/>{content}</div>',
+            f'<div class="chat-user">👤 <strong>Bạn</strong><br/>{safe_content}</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            f'<div class="chat-assistant">🤖 <strong>Assistant</strong><br/>{content}</div>',
+            f'<div class="chat-assistant">🤖 <strong>Assistant</strong><br/>{safe_content}</div>',
             unsafe_allow_html=True,
         )
 
@@ -215,7 +217,10 @@ def main() -> None:
         )
         col_btn1, col_btn2 = st.columns([1, 5])
         submitted = col_btn1.form_submit_button("📤 Gửi", type="primary")
-        col_btn2.form_submit_button("🗑️ Xóa lịch sử", on_click=lambda: st.session_state.update({"chat_history": []}))
+        col_btn2.form_submit_button(
+            "🗑️ Xóa lịch sử",
+            on_click=lambda: st.session_state.update({"chat_history": [], "last_retrieval_result": None}),
+        )
 
     if submitted and question.strip():
         with st.spinner("🤔 Đang xử lý câu hỏi..."):

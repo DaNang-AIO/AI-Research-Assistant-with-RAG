@@ -12,6 +12,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import html
 import streamlit as st
 
 st.set_page_config(
@@ -90,8 +91,9 @@ def _render_chunk_card(sc, index: int) -> None:
         f"</div>"
     )
 
-    source = sc.chunk.metadata.get("source", sc.chunk.doc_id)
-    page = sc.chunk.metadata.get("page", "—")
+    source = html.escape(sc.chunk.metadata.get("source", sc.chunk.doc_id))
+    page = html.escape(str(sc.chunk.metadata.get("page", "—")))
+    chunk_id = html.escape(sc.chunk.chunk_id)
 
     st.markdown(
         f"""
@@ -104,7 +106,7 @@ def _render_chunk_card(sc, index: int) -> None:
             <div style="margin:8px 0">
                 <span class="meta-tag">📄 {source}</span>
                 <span class="meta-tag">📄 Trang {page}</span>
-                <span class="meta-tag">🆔 {sc.chunk.chunk_id}</span>
+                <span class="meta-tag">🆔 {chunk_id}</span>
                 <span class="meta-tag">📍 [{sc.chunk.start_index} → {sc.chunk.end_index}]</span>
                 <span class="meta-tag">📏 {sc.chunk.end_index - sc.chunk.start_index} ký tự</span>
             </div>
@@ -163,7 +165,7 @@ def main() -> None:
     st.subheader("❓ Câu hỏi đã truy vấn")
     st.markdown(
         f'<div style="background:#1e293b; border-radius:10px; padding:12px 16px; '
-        f'color:#e2e8f0; font-size:15px">{result["question"]}</div>',
+        f'color:#e2e8f0; font-size:15px">{html.escape(result["question"])}</div>',
         unsafe_allow_html=True,
     )
 
