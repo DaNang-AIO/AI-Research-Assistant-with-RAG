@@ -6,6 +6,7 @@ Sprint 4: tích hợp ExperimentTracker thật (S4-PE-01..S4-PE-05).
 """
 
 import html
+import datetime
 import streamlit as st
 
 st.set_page_config(
@@ -195,7 +196,13 @@ def main() -> None:
         st.caption(f"Hiển thị {len(filtered_events)}/{len(events)} sự kiện")
         st.markdown("")
 
-        for i, event in enumerate(sorted(filtered_events, key=lambda e: e["timestamp"] if e["timestamp"] != "—" else "", reverse=True)):
+        def _ts_key(e: dict) -> datetime.datetime:
+            try:
+                return datetime.datetime.strptime(e["timestamp"], "%H:%M:%S")
+            except (ValueError, KeyError):
+                return datetime.datetime.min
+
+        for i, event in enumerate(sorted(filtered_events, key=_ts_key, reverse=True)):
             tag_class = "tag-index" if event["type"] == "indexing" else "tag-query"
             tag_label = "INDEXING" if event["type"] == "indexing" else "QUERY"
             status_icon = "✅" if event["success"] else "❌"
