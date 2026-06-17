@@ -11,6 +11,8 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import html
+import datetime
 import time
 import streamlit as st
 
@@ -175,7 +177,8 @@ def main() -> None:
 
                 with st.spinner(f"Indexing `{uploaded_file.name}`..."):
                     result = pipeline.index_document(file_path)
-                    results.append((uploaded_file.name, result))
+                    ts = datetime.datetime.now().strftime("%H:%M:%S")
+                    results.append((uploaded_file.name, result, ts))
 
                     # Thêm vào danh sách tài liệu đã index
                     if result.success and uploaded_file.name not in st.session_state["indexed_docs"]:
@@ -188,7 +191,7 @@ def main() -> None:
             st.markdown("---")
             st.subheader("📊 Kết quả Indexing")
 
-            success_count = sum(1 for _, r in results if r.success)
+            success_count = sum(1 for _, r, _ts in results if r.success)
             fail_count = len(results) - success_count
 
             c1, c2, c3 = st.columns(3)
@@ -196,15 +199,15 @@ def main() -> None:
             c2.metric("❌ Thất bại", fail_count)
             c3.metric(
                 "📦 Tổng số chunk",
-                sum(r.num_chunks for _, r in results if r.success),
+                sum(r.num_chunks for _, r, _ts in results if r.success),
             )
 
-            for file_name, result in results:
+            for file_name, result, _ts in results:
                 if result.success:
                     st.markdown(
                         f"""
                         <div class="result-card">
-                            <strong>✅ {file_name}</strong><br/>
+                            <strong>✅ {html.escape(file_name)}</strong><br/>
                             <small>
                                 Doc ID: <code>{result.doc_id}</code> &nbsp;|&nbsp;
                                 Chunks: <strong>{result.num_chunks}</strong> &nbsp;|&nbsp;
@@ -218,8 +221,8 @@ def main() -> None:
                     st.markdown(
                         f"""
                         <div class="error-card">
-                            <strong>❌ {file_name}</strong><br/>
-                            <small>Lỗi: {result.error_message}</small>
+                            <strong>❌ {html.escape(file_name)}</strong><br/>
+                            <small>Lỗi: {html.escape(result.error_message or "")}</small>
                         </div>
                         """,
                         unsafe_allow_html=True,

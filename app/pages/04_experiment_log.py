@@ -5,6 +5,7 @@ Sprint 1: đọc dữ liệu stub từ session_state (indexing_results, chat_his
 Sprint 4: tích hợp ExperimentTracker thật (S4-PE-01..S4-PE-05).
 """
 
+import html
 import datetime
 import streamlit as st
 
@@ -66,7 +67,7 @@ def _build_experiment_timeline() -> list:
     events = []
 
     # Sự kiện indexing từ trang Document Upload
-    for file_name, result in st.session_state.get("indexing_results", []):
+    for file_name, result, timestamp in st.session_state.get("indexing_results", []):
         events.append({
             "type": "indexing",
             "icon": "📄",
@@ -77,7 +78,7 @@ def _build_experiment_timeline() -> list:
                 f"collection={result.collection_name} | "
                 f"success={result.success}"
             ),
-            "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+            "timestamp": timestamp,
             "success": result.success,
         })
 
@@ -136,7 +137,7 @@ def main() -> None:
     col2.metric("💬 Lượt truy vấn", len(chat_history))
     col3.metric(
         "📦 Tổng số chunk",
-        sum(r.num_chunks for _, r in indexing_results if r.success),
+        sum(r.num_chunks for _, r, _ts in indexing_results if r.success),
     )
     avg_latency = (
         sum(t.get("latency_ms", 0) for t in chat_history) / len(chat_history)
@@ -195,7 +196,13 @@ def main() -> None:
         st.caption(f"Hiển thị {len(filtered_events)}/{len(events)} sự kiện")
         st.markdown("")
 
-        for i, event in enumerate(reversed(filtered_events)):
+        def _ts_key(e: dict) -> datetime.datetime:
+            try:
+                return datetime.datetime.strptime(e["timestamp"], "%H:%M:%S")
+            except (ValueError, KeyError):
+                return datetime.datetime.min
+
+        for i, event in enumerate(sorted(filtered_events, key=_ts_key, reverse=True)):
             tag_class = "tag-index" if event["type"] == "indexing" else "tag-query"
             tag_label = "INDEXING" if event["type"] == "indexing" else "QUERY"
             status_icon = "✅" if event["success"] else "❌"
@@ -206,11 +213,11 @@ def main() -> None:
                     <div class="log-icon">{event['icon']}</div>
                     <div class="log-body">
                         <div class="log-title">
-                            {status_icon} {event['title']}
+                            {status_icon} {html.escape(event['title'])}
                             &nbsp;<span class="{tag_class}">{tag_label}</span>
                         </div>
                         <div class="log-meta">
-                            ⏰ {event['timestamp']} &nbsp;|&nbsp; {event['details']}
+                            ⏰ {event['timestamp']} &nbsp;|&nbsp; {html.escape(event['details'])}
                         </div>
                     </div>
                 </div>

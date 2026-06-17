@@ -11,6 +11,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+import html
 import time
 import datetime
 import streamlit as st
@@ -109,14 +110,15 @@ def _stub_rag_query(question: str, config: dict) -> RAGResponse:
 
 def _render_message(role: str, content: str) -> None:
     """Render một tin nhắn trong khung chat."""
+    safe_content = html.escape(content)
     if role == "user":
         st.markdown(
-            f'<div class="chat-user">👤 <strong>Bạn</strong><br/>{content}</div>',
+            f'<div class="chat-user">👤 <strong>Bạn</strong><br/>{safe_content}</div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            f'<div class="chat-assistant">🤖 <strong>Assistant</strong><br/>{content}</div>',
+            f'<div class="chat-assistant">🤖 <strong>Assistant</strong><br/>{safe_content}</div>',
             unsafe_allow_html=True,
         )
 
@@ -215,7 +217,10 @@ def main() -> None:
         )
         col_btn1, col_btn2 = st.columns([1, 5])
         submitted = col_btn1.form_submit_button("📤 Gửi", type="primary")
-        col_btn2.form_submit_button("🗑️ Xóa lịch sử", on_click=lambda: st.session_state.update({"chat_history": []}))
+        col_btn2.form_submit_button(
+            "🗑️ Xóa lịch sử",
+            on_click=lambda: st.session_state.update({"chat_history": [], "last_retrieval_result": None}),
+        )
 
     if submitted and question.strip():
         with st.spinner("🤔 Đang xử lý câu hỏi..."):

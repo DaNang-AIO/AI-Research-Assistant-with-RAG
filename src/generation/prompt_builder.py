@@ -12,6 +12,8 @@ class PromptBuilder:
     """
     Xây dựng prompt cho RAG với system instruction và context injection.
     Hỗ trợ nhiều template khác nhau để thực nghiệm.
+
+    Triển khai đầy đủ: S3-PE-01.
     """
 
     DEFAULT_SYSTEM_PROMPT = (
@@ -23,17 +25,37 @@ class PromptBuilder:
         self.system_prompt = system_prompt
 
     def build(self, question: str, contexts: List[ScoredChunk]) -> str:
-        """Ghép system_prompt + context chunks + câu hỏi thành một prompt hoàn chỉnh."""
-        raise NotImplementedError(
-            "PromptBuilder.build() sẽ được triển khai đầy đủ ở Sprint 3"
+        """
+        Ghép system_prompt + context chunks + câu hỏi thành prompt hoàn chỉnh.
+
+        Preconditions:
+          - question không rỗng
+          - contexts là list (có thể rỗng)
+
+        Postconditions:
+          - Trả về prompt string hợp lệ
+          - prompt chứa nội dung của tất cả contexts
+          - prompt chứa question (Property 9)
+        """
+        if not question or not question.strip():
+            raise ValueError("question không được rỗng")
+        ctx_text = self.format_context(contexts)
+        return (
+            f"{self.system_prompt}\n\n"
+            f"NGỮ CẢNH:\n{ctx_text}\n\n"
+            f"CÂU HỎI: {question}\n\n"
+            f"TRẢ LỜI:"
         )
 
     def format_context(self, contexts: List[ScoredChunk]) -> str:
         """Định dạng danh sách ScoredChunk thành đoạn text context."""
-        raise NotImplementedError(
-            "PromptBuilder.format_context() sẽ được triển khai đầy đủ ở Sprint 3"
-        )
+        if not contexts:
+            return "(Không có ngữ cảnh liên quan.)"
+        parts = []
+        for i, sc in enumerate(contexts, 1):
+            parts.append(f"[Đoạn {i}] (score: {sc.score:.3f})\n{sc.chunk.content}")
+        return "\n\n".join(parts)
 
     def set_system_prompt(self, new_prompt: str) -> None:
-        """Thay đổi system prompt."""
+        """Thay đổi system prompt (dùng khi thực nghiệm prompt engineering)."""
         self.system_prompt = new_prompt
