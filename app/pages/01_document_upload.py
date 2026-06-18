@@ -14,6 +14,8 @@ if _PROJECT_ROOT not in sys.path:
 import html
 import datetime
 import time
+import uuid
+from pathlib import Path
 import streamlit as st
 
 from src.models import IndexingResult, ChunkStrategy
@@ -87,8 +89,11 @@ def main() -> None:
         chunk_size=cfg.get("chunk_size", 512),
         chunk_overlap=cfg.get("chunk_overlap", 50),
     )
+    # Lấy OLLAMA endpoint từ env (configurable), fallback về localhost
+    _ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     embedding_model = OllamaEmbeddingModel(
-        model_name=cfg.get("embedding_model", "nomic-embed-text")
+        model_name=cfg.get("embedding_model", "nomic-embed-text"),
+        ollama_base_url=_ollama_base_url,
     )
     vector_store = ChromaVectorStore(
         collection_name="rag_collection"
@@ -167,7 +172,9 @@ def main() -> None:
                 )
 
                 # Lưu file vật lý vào thư mục data/raw/
-                file_path = os.path.join("data/raw", uploaded_file.name)
+                # Chuẩn hóa tên file để tránh path traversal (chỉ lấy basename)
+                safe_name = Path(uploaded_file.name).name
+                file_path = os.path.join("data/raw", f"{uuid.uuid4().hex}_{safe_name}")
                 try:
                     with open(file_path, "wb") as temp_file:
                         temp_file.write(uploaded_file.getbuffer())
@@ -176,7 +183,11 @@ def main() -> None:
                     continue
 
                 with st.spinner(f"Indexing `{uploaded_file.name}`..."):
-                    result = pipeline.index_document(file_path)
+                    try:
+                        result = pipeline.index_document(file_path)
+                    except (NotImplementedError, ValueError, RuntimeError, FileNotFoundError) as e:
+                        st.error(f"Index thất bại cho `{uploaded_file.name}`: {e}")
+                        continue
                     ts = datetime.datetime.now().strftime("%H:%M:%S")
                     results.append((uploaded_file.name, result, ts))
 

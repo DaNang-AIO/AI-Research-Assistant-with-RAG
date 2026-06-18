@@ -87,7 +87,7 @@ def _stub_rag_query(question: str, config: dict) -> RAGResponse:
             score=round(0.95 - i * 0.08, 2),
             rank=i + 1,
         )
-        for i in range(min(config.get("top_k", 3), 3))
+        for i in range(config.get("top_k", 3))
     ]
 
     fake_answer = (
