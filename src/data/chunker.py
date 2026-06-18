@@ -15,10 +15,18 @@ class TextChunker(BaseChunker):
 
     def __init__(
         self,
-        strategy: ChunkStrategy = ChunkStrategy.RECURSIVE,
+        strategy: ChunkStrategy = ChunkStrategy.FIXED_SIZE,
         chunk_size: int = 512,
         chunk_overlap: int = 50,
     ):
+        if chunk_size <= 0:
+            raise ValueError("chunk_size phải lớn hơn 0")
+        if chunk_overlap < 0:
+            raise ValueError("chunk_overlap không được âm")
+        if chunk_overlap >= chunk_size:
+            raise ValueError("chunk_overlap phải nhỏ hơn chunk_size")
+        
+
         self.strategy = strategy
         self.chunk_size = chunk_size        # Số ký tự mỗi chunk
         self.chunk_overlap = chunk_overlap  # Số ký tự chồng lấp giữa chunks
@@ -43,8 +51,8 @@ class TextChunker(BaseChunker):
 
     def chunk_by_fixed_size(self, document: Document) -> List[Chunk]:
         """Cắt theo chunk_size cố định với overlap"""
-        text = document.content.strip()
-        if not text:
+        text = document.content
+        if text == "":
             return []
         
         chunks = []
@@ -63,16 +71,18 @@ class TextChunker(BaseChunker):
                     index=chunk_index, 
                 )) 
             chunk_index += 1 
+            if end == len(text):
+                break
             start += step 
         return chunks
 
     def chunk_by_recursive(self, document: Document) -> List[Chunk]:
         """Chia theo thứ tự: paragraph → sentence → word"""
-
+        raise NotImplementedError("Recursive chunking chưa được triển khai")
 
     def chunk_by_semantic(self, document: Document) -> List[Chunk]:
         """Chia theo ranh giới câu (sentence boundary)"""
-        ...
+        raise NotImplementedError("Semantic chunking chưa được triển khai")
 
     def _create_chunk(
         self, doc_id: str, content: str, start: int, end: int, index: int
