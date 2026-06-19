@@ -4,13 +4,23 @@ Triển khai: S1-PE-02 (khung + stub index_document/query để dashboard demo
 luồng giả lập), S2-PE-01 (index_document/index_directory thật), và
 S3-PE-03 (query thật — Property 10).
 """
+
 import os
+import hashlib
 import time
 import logging
+from typing import List
+import datetime
 
-from src.interfaces import BaseLoader, BaseChunker, BaseEmbeddingModel, BaseVectorStore, BaseLLMClient
+from src.interfaces import (
+    BaseLoader,
+    BaseChunker,
+    BaseEmbeddingModel,
+    BaseVectorStore,
+    BaseLLMClient,
+)
 from src.generation.prompt_builder import PromptBuilder
-from src.models import IndexingResult, RAGResponse
+from src.models import IndexingResult, RAGResponse, ScoredChunk, Chunk
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +147,7 @@ class RAGPipeline:
         )
         return response
 
-    def index_directory(self, dir_path: str) -> list[IndexingResult]:
+    def index_directory(self, dir_path: str) -> List[IndexingResult]:
         """Index tất cả tài liệu trong một thư mục"""
         if not os.path.isdir(dir_path):
             raise ValueError(f"{dir_path} phải là thư mục")
@@ -145,7 +155,7 @@ class RAGPipeline:
         list_index = []
         for root, _, files in os.walk(dir_path):
             for name in files:
-                file_path = os.path.join(root,name)
+                file_path = os.path.join(root, name)
                 try:
                     idx_doc = self.index_document(file_path)
                 except Exception as e:

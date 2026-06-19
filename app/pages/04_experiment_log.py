@@ -87,13 +87,13 @@ def _build_experiment_timeline() -> list:
         events.append({
             "type": "query",
             "icon": "💬",
-            "title": f'Query: "{turn["question"][:60]}{"\u2026" if len(turn["question"]) > 60 else ""}"',
+            "title": f'Query: "{turn["question"][:60]}{"…" if len(turn["question"]) > 60 else ""}"',
             "details": (
                 f"contexts={len(turn.get('contexts', []))} | "
                 f"latency={turn.get('latency_ms', 0):.0f} ms | "
-                f"ts={turn.get('timestamp', '\u2014')}"
+                f"ts={turn.get('timestamp', '—')}"
             ),
-            "timestamp": turn.get("timestamp", "\u2014"),
+            "timestamp": turn.get("timestamp", "—"),
             "success": True,
         })
 

@@ -14,7 +14,7 @@ if _PROJECT_ROOT not in sys.path:
 
 import streamlit as st
 
-from config.settings import AppConfig
+from config.settings import AppConfig, OllamaConfig, ChunkerConfig
 
 # ── Phải gọi set_page_config() ở đầu tiên, trước mọi lệnh st khác ──────────
 st.set_page_config(
@@ -25,37 +25,37 @@ st.set_page_config(
 )
 
 # ── CSS tuỳ chỉnh ────────────────────────────────────────────────────────────
-# st.markdown(
-#     """
-#     <style>
-#     /* Màu nền sidebar */
-#     [data-testid="stSidebar"] {
-#         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-#     }
-#     [data-testid="stSidebar"] * {
-#         color: #e2e8f0 !important;
-#     }
-#     /* Badge trạng thái */
-#     .status-badge {
-#         display: inline-block;
-#         padding: 2px 10px;
-#         border-radius: 12px;
-#         font-size: 12px;
-#         font-weight: 600;
-#     }
-#     .status-ok   { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
-#     .status-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
-#     .status-err  { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
-#     </style>
-#     """,
-#     unsafe_allow_html=True,
-# )
+st.markdown(
+    """
+    <style>
+    /* Màu nền sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+    [data-testid="stSidebar"] * {
+        color: #e2e8f0 !important;
+    }
+    /* Badge trạng thái */
+    .status-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-ok   { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .status-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .status-err  { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def _init_session_defaults() -> None:
     """Khởi tạo session_state với giá trị mặc định từ AppConfig nếu chưa có."""
     if "config" not in st.session_state:
-        default = AppConfig.from_env()
+        default = AppConfig()
         st.session_state["config"] = {
             "ollama_model": default.ollama.default_llm_model,
             "embedding_model": default.ollama.default_embedding_model,
@@ -81,25 +81,23 @@ def _render_sidebar() -> None:
         st.header("⚙️ Cấu hình Pipeline")
 
         # ── LLM Model ──────────────────────────────────────────────────────
-        _llm_presets = ["llama3", "mistral", "gemma"]
+        llm_options = ["llama3", "mistral", "gemma"]
         current_llm = st.session_state["config"].get("ollama_model", "llama3")
-        llm_options = _llm_presets if current_llm in _llm_presets else [current_llm] + _llm_presets
         ollama_model = st.selectbox(
             "🤖 LLM Model",
             options=llm_options,
-            index=llm_options.index(current_llm),
+            index=llm_options.index(current_llm) if current_llm in llm_options else 0,
             key="sidebar_llm_model",
             help="Model ngôn ngữ dùng để sinh câu trả lời (chạy cục bộ qua OLLAMA).",
         )
 
         # ── Embedding Model ─────────────────────────────────────────────────
-        _emb_presets = ["nomic-embed-text", "mxbai-embed-large"]
+        emb_options = ["nomic-embed-text", "mxbai-embed-large"]
         current_emb = st.session_state["config"].get("embedding_model", "nomic-embed-text")
-        emb_options = _emb_presets if current_emb in _emb_presets else [current_emb] + _emb_presets
         embedding_model = st.selectbox(
             "🧮 Embedding Model",
             options=emb_options,
-            index=emb_options.index(current_emb),
+            index=emb_options.index(current_emb) if current_emb in emb_options else 0,
             key="sidebar_emb_model",
             help="Model tạo vector embedding cho tài liệu và câu hỏi.",
         )
