@@ -24,44 +24,44 @@ st.set_page_config(
     layout="wide",
 )
 
-# # ── CSS ──────────────────────────────────────────────────────────────────────
-# st.markdown(
-#     """
-#     <style>
-#     .chat-user {
-#         background: linear-gradient(135deg, #1e3a5f, #1e40af);
-#         border-radius: 16px 16px 4px 16px;
-#         padding: 12px 16px;
-#         margin: 4px 60px 4px 0;
-#         color: #e2e8f0;
-#     }
-#     .chat-assistant {
-#         background: #1e293b;
-#         border: 1px solid #334155;
-#         border-radius: 16px 16px 16px 4px;
-#         padding: 12px 16px;
-#         margin: 4px 0 4px 60px;
-#         color: #e2e8f0;
-#     }
-#     .source-badge {
-#         display: inline-block;
-#         background: #1e3a5f;
-#         border: 1px solid #3b82f644;
-#         border-radius: 8px;
-#         padding: 4px 10px;
-#         font-size: 12px;
-#         color: #93c5fd;
-#         margin: 2px;
-#     }
-#     .latency-tag {
-#         font-size: 11px;
-#         color: #64748b;
-#         margin-top: 6px;
-#     }
-#     </style>
-#     """,
-#     unsafe_allow_html=True,
-# )
+# ── CSS ──────────────────────────────────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+    .chat-user {
+        background: linear-gradient(135deg, #1e3a5f, #1e40af);
+        border-radius: 16px 16px 4px 16px;
+        padding: 12px 16px;
+        margin: 4px 60px 4px 0;
+        color: #e2e8f0;
+    }
+    .chat-assistant {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px 16px 16px 4px;
+        padding: 12px 16px;
+        margin: 4px 0 4px 60px;
+        color: #e2e8f0;
+    }
+    .source-badge {
+        display: inline-block;
+        background: #1e3a5f;
+        border: 1px solid #3b82f644;
+        border-radius: 8px;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: #93c5fd;
+        margin: 2px;
+    }
+    .latency-tag {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 6px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def _stub_rag_query(question: str, config: dict) -> RAGResponse:

@@ -3,6 +3,7 @@
 Triển khai: S3-PE-01 (DEFAULT_SYSTEM_PROMPT, build, format_context,
 set_system_prompt — Property 9).
 """
+
 from typing import List
 from src.models import ScoredChunk
 
@@ -20,8 +21,8 @@ class PromptBuilder:
         "ngữ cảnh được cung cấp. Nếu không đủ thông tin, hãy nói rõ."
     )
 
-    def __init__(self, system_prompt: str | None = None):
-        self.system_prompt = system_prompt or self.DEFAULT_SYSTEM_PROMPT
+    def __init__(self, system_prompt: str = DEFAULT_SYSTEM_PROMPT):
+        self.system_prompt = system_prompt
 
     def build(self, question: str, contexts: List[ScoredChunk]) -> str:
         """

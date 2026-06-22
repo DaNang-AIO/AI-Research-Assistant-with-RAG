@@ -3,9 +3,11 @@
 Triển khai: S2-DE-01 (chunk_by_fixed_size) và S2-DE-02 (chunk_by_recursive,
 chunk_by_semantic, điều phối qua `chunk()`).
 """
-from src.interfaces import BaseChunker
-from src.models import ChunkStrategy, Chunk, Document
+
 from typing import List
+from src.interfaces import BaseChunker
+from src.models import Chunk, Document, ChunkStrategy
+
 
 class TextChunker(BaseChunker):
     """

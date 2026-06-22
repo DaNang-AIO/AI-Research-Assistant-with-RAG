@@ -14,9 +14,18 @@ if _PROJECT_ROOT not in sys.path:
 import html
 import datetime
 import time
+import uuid
+from pathlib import Path
 import streamlit as st
 
-from src.models import IndexingResult
+from src.models import IndexingResult, ChunkStrategy
+from src.data.loader import DocumentLoader
+from src.data.chunker import TextChunker
+from src.embeddings.embedding_model import OllamaEmbeddingModel
+from src.embeddings.vector_store import ChromaVectorStore
+from src.generation.llm_client import OllamaClient
+from src.generation.prompt_builder import PromptBuilder
+from src.pipeline.rag_pipeline import RAGPipeline
 
 st.set_page_config(
     page_title="Document Upload — RAG Research",
@@ -26,62 +35,38 @@ st.set_page_config(
 
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
-# st.markdown(
-#     """
-#     <style>
-#     .upload-card {
-#         background: linear-gradient(135deg, #1e3a5f22, #3b82f622);
-#         border: 1px dashed #3b82f688;
-#         border-radius: 16px;
-#         padding: 32px;
-#         text-align: center;
-#     }
-#     .result-card {
-#         background: #0f2a1a;
-#         border: 1px solid #22c55e44;
-#         border-radius: 12px;
-#         padding: 16px;
-#         margin: 8px 0;
-#     }
-#     .error-card {
-#         background: #2a0f0f;
-#         border: 1px solid #ef444444;
-#         border-radius: 12px;
-#         padding: 16px;
-#         margin: 8px 0;
-#     }
-#     </style>
-#     """,
-#     unsafe_allow_html=True,
-# )
-
-
-def _stub_index_document(file_name: str, config: dict) -> IndexingResult:
+st.markdown(
     """
-    STUB cho Sprint 1: Giả lập IndexingResult.
-    Sprint 2 (S2-PE-01): thay bằng RAGPipeline.index_document() thật.
-    """
-    import hashlib
-    time.sleep(0.8)  # giả lập độ trễ xử lý
-    doc_id = hashlib.md5(file_name.encode()).hexdigest()[:12]
-    # Ước lượng số chunk dựa trên chunk_size (giả lập)
-    fake_num_chunks = max(1, int(1000 / config.get("chunk_size", 512)) + 3)
-    return IndexingResult(
-        doc_id=doc_id,
-        num_chunks=fake_num_chunks,
-        collection_name="rag_collection",
-        success=True,
-        error_message=None,
-    )
+    <style>
+    .upload-card {
+        background: linear-gradient(135deg, #1e3a5f22, #3b82f622);
+        border: 1px dashed #3b82f688;
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+    }
+    .result-card {
+        background: #0f2a1a;
+        border: 1px solid #22c55e44;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+    }
+    .error-card {
+        background: #2a0f0f;
+        border: 1px solid #ef444444;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def main() -> None:
-    # ── Đảm bảo indexed_docs và indexing_results đã được khởi tạo ───────────
-    if "indexed_docs" not in st.session_state:
-        st.session_state["indexed_docs"] = []
-    if "indexing_results" not in st.session_state:
-        st.session_state["indexing_results"] = []
-
+    # ── Đảm bảo config đã được khởi tạo ────────────────────────────────────
     if "config" not in st.session_state:
         st.session_state["config"] = {
             "ollama_model": "llama3",
@@ -90,8 +75,43 @@ def main() -> None:
             "chunk_overlap": 50,
             "top_k": 5,
         }
+    if "indexed_docs" not in st.session_state:
+        st.session_state["indexed_docs"] = []
+    if "indexing_results" not in st.session_state:
+        st.session_state["indexing_results"] = []
 
     cfg = st.session_state["config"]
+
+    # ── Khởi tạo RAGPipeline và các component ──────────────────────────────
+    loader = DocumentLoader()
+    chunker = TextChunker(
+        strategy=ChunkStrategy.RECURSIVE,
+        chunk_size=cfg.get("chunk_size", 512),
+        chunk_overlap=cfg.get("chunk_overlap", 50),
+    )
+    # Lấy OLLAMA endpoint từ env (configurable), fallback về localhost
+    _ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    embedding_model = OllamaEmbeddingModel(
+        model_name=cfg.get("embedding_model", "nomic-embed-text"),
+        ollama_base_url=_ollama_base_url,
+    )
+    vector_store = ChromaVectorStore(
+        collection_name="rag_collection"
+    )
+    llm_client = OllamaClient(
+        model_name=cfg.get("ollama_model", "llama3")
+    )
+    prompt_builder = PromptBuilder()
+
+    pipeline = RAGPipeline(
+        loader=loader,
+        chunker=chunker,
+        embedding_model=embedding_model,
+        vector_store=vector_store,
+        llm_client=llm_client,
+        prompt_builder=prompt_builder,
+        top_k=cfg.get("top_k", 5),
+    )
 
     st.title("📄 Document Upload")
     st.markdown(
@@ -101,9 +121,9 @@ def main() -> None:
 
     # ── Thông báo Sprint 1 (stub) ────────────────────────────────────────────
     st.info(
-        "⚠️ **Sprint 1 — Demo mode:** `index_document()` đang dùng stub giả lập. "
-        "Dữ liệu thật sẽ được index từ Sprint 2 (S2-PE-01).",
-        icon="🔧",
+        "ℹ️ **Sprint 1 — RAGPipeline integrated:** `index_document()` được gọi qua pipeline thật tích hợp với `DocumentLoader` chạy thật. "
+        "Các công đoạn chia nhỏ, vector hóa và lưu trữ (ChromaDB) đang ở chế độ stub và sẽ được hoàn thiện ở Sprint 2.",
+        icon="ℹ️",
     )
 
     st.markdown("---")
@@ -142,14 +162,32 @@ def main() -> None:
             results = []
             progress = st.progress(0, text="Đang khởi tạo...")
 
+            # Đảm bảo thư mục lưu trữ file gốc vật lý tồn tại (design.md §1.2)
+            os.makedirs("data/raw", exist_ok=True)
+
             for i, uploaded_file in enumerate(uploaded_files):
                 progress.progress(
                     (i) / len(uploaded_files),
                     text=f"Đang xử lý: `{uploaded_file.name}` ({i+1}/{len(uploaded_files)})",
                 )
 
+                # Lưu file vật lý vào thư mục data/raw/
+                # Chuẩn hóa tên file để tránh path traversal (chỉ lấy basename)
+                safe_name = Path(uploaded_file.name).name
+                file_path = os.path.join("data/raw", f"{uuid.uuid4().hex}_{safe_name}")
+                try:
+                    with open(file_path, "wb") as temp_file:
+                        temp_file.write(uploaded_file.getbuffer())
+                except Exception as e:
+                    st.error(f"Không thể ghi file {uploaded_file.name} lên ổ đĩa: {e}")
+                    continue
+
                 with st.spinner(f"Indexing `{uploaded_file.name}`..."):
-                    result = _stub_index_document(uploaded_file.name, cfg)
+                    try:
+                        result = pipeline.index_document(file_path)
+                    except (NotImplementedError, ValueError, RuntimeError, FileNotFoundError) as e:
+                        st.error(f"Index thất bại cho `{uploaded_file.name}`: {e}")
+                        continue
                     ts = datetime.datetime.now().strftime("%H:%M:%S")
                     results.append((uploaded_file.name, result, ts))
 
@@ -180,7 +218,7 @@ def main() -> None:
                     st.markdown(
                         f"""
                         <div class="result-card">
-                            <strong>\u2705 {html.escape(file_name)}</strong><br/>
+                            <strong>✅ {html.escape(file_name)}</strong><br/>
                             <small>
                                 Doc ID: <code>{result.doc_id}</code> &nbsp;|&nbsp;
                                 Chunks: <strong>{result.num_chunks}</strong> &nbsp;|&nbsp;
@@ -194,8 +232,8 @@ def main() -> None:
                     st.markdown(
                         f"""
                         <div class="error-card">
-                            <strong>\u274c {html.escape(file_name)}</strong><br/>
-                            <small>L\u1ed7i: {html.escape(result.error_message or "")}</small>
+                            <strong>❌ {html.escape(file_name)}</strong><br/>
+                            <small>Lỗi: {html.escape(result.error_message or "")}</small>
                         </div>
                         """,
                         unsafe_allow_html=True,
