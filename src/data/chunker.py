@@ -80,7 +80,6 @@ class TextChunker(BaseChunker):
 
     def _recursive_split(self, text: str, separators: List[str]) -> List[str]:
         """Hàm đệ quy lõi xử lý cắt và gom chuỗi (str -> List[str])"""
-        text = text.strip()
         if len(text) <= self.chunk_size:
             return [text]
         
@@ -98,27 +97,31 @@ class TextChunker(BaseChunker):
             return [text[i:i+self.chunk_size] for i in range(0, len(text), self.chunk_size)]
         
         splits = text.split(appropriate_separator)
+        parts = [
+            part + (appropriate_separator if i < len(splits) - 1 else "")
+            for i, part in enumerate(splits)
+        ]
         final_chunks = []
         current_chunk = ""
         
-        for split in splits:
+        for part in parts:
             # Nếu phần split nhỏ vẫn lớn hơn chunk_size -> Đệ quy sâu xuống tiếp
-            if len(split) > self.chunk_size:
+            if len(part) > self.chunk_size:
                 if current_chunk:
-                    final_chunks.append(current_chunk.strip())
+                    final_chunks.append(current_chunk)
                     current_chunk = ""
                 # Đệ quy xuống cấp thấp hơn với phần text con
-                sub_chunks = self._recursive_split(split, remaining_separators)
+                sub_chunks = self._recursive_split(part, remaining_separators)
                 final_chunks.extend(sub_chunks)
             else:
                 # Gom các cụm text nhỏ lại để tối ưu hóa kích thước chunk gần với chunk_size nhất
                 separator_to_append = appropriate_separator if current_chunk else ""
-                if len(current_chunk) + len(separator_to_append) + len(split) <= self.chunk_size:
-                    current_chunk += separator_to_append + split
+                if len(current_chunk) + len(part) <= self.chunk_size:
+                    current_chunk += part
                 else:
                     if current_chunk:
-                        final_chunks.append(current_chunk.strip())
-                    current_chunk = split
+                        final_chunks.append(current_chunk)
+                    current_chunk = part
                     
         if current_chunk:
             final_chunks.append(current_chunk.strip())
@@ -128,7 +131,7 @@ class TextChunker(BaseChunker):
     def chunk_by_recursive(self, document: Document, separators: Optional[List[str]] = None) -> List[Chunk]:
         """Chia theo thứ tự mặc định hoặc cấu hình: paragraph → sentence → word"""
         text = document.content
-        if not text or not text.strip():
+        if text == "":
             return []
             
         if separators is None:
@@ -147,7 +150,7 @@ class TextChunker(BaseChunker):
             # Tìm vị trí xuất hiện của chunk này trong văn bản gốc để gán start/end_index chuẩn xác
             start_idx = text.find(content, current_search_idx)
             if start_idx == -1:  # Dự phòng trường hợp strip làm lệch chuỗi
-                start_idx = current_search_idx
+                raise ValueError(f"Không tìm thấy chunk trong văn bản gốc: {content[:30]}...")
             end_idx = start_idx + len(content)
             current_search_idx = end_idx
             
