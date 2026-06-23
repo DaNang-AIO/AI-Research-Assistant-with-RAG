@@ -4,7 +4,7 @@ Triển khai: S2-DE-01 (chunk_by_fixed_size) và S2-DE-02 (chunk_by_recursive,
 chunk_by_semantic, điều phối qua `chunk()`).
 """
 
-from typing import List
+from typing import List, Optional
 from src.interfaces import BaseChunker
 from src.models import Chunk, Document, ChunkStrategy
 
@@ -78,20 +78,101 @@ class TextChunker(BaseChunker):
             start += step 
         return chunks
 
-    def chunk_by_recursive(self, document: Document) -> List[Chunk]:
-        """Chia theo thứ tự: paragraph → sentence → word"""
-        raise NotImplementedError("Recursive chunking chưa được triển khai")
+    def _recursive_split(self, text: str, separators: List[str]) -> List[str]:
+        """Hàm đệ quy lõi xử lý cắt và gom chuỗi (str -> List[str])"""
+        text = text.strip()
+        if len(text) <= self.chunk_size:
+            return [text]
+        
+        appropriate_separator = None
+        remaining_separators = []
+
+        for i, sep in enumerate(separators):
+            if sep in text:
+                appropriate_separator = sep
+                remaining_separators = separators[i+1:]
+                break
+        
+        # Fallback: Nếu không còn separator nào phù hợp, cắt cứng theo chuỗi ký tự
+        if appropriate_separator is None:
+            return [text[i:i+self.chunk_size] for i in range(0, len(text), self.chunk_size)]
+        
+        splits = text.split(appropriate_separator)
+        final_chunks = []
+        current_chunk = ""
+        
+        for split in splits:
+            # Nếu phần split nhỏ vẫn lớn hơn chunk_size -> Đệ quy sâu xuống tiếp
+            if len(split) > self.chunk_size:
+                if current_chunk:
+                    final_chunks.append(current_chunk.strip())
+                    current_chunk = ""
+                # Đệ quy xuống cấp thấp hơn với phần text con
+                sub_chunks = self._recursive_split(split, remaining_separators)
+                final_chunks.extend(sub_chunks)
+            else:
+                # Gom các cụm text nhỏ lại để tối ưu hóa kích thước chunk gần với chunk_size nhất
+                separator_to_append = appropriate_separator if current_chunk else ""
+                if len(current_chunk) + len(separator_to_append) + len(split) <= self.chunk_size:
+                    current_chunk += separator_to_append + split
+                else:
+                    if current_chunk:
+                        final_chunks.append(current_chunk.strip())
+                    current_chunk = split
+                    
+        if current_chunk:
+            final_chunks.append(current_chunk.strip())
+            
+        return final_chunks
+
+    def chunk_by_recursive(self, document: Document, separators: Optional[List[str]] = None) -> List[Chunk]:
+        """Chia theo thứ tự mặc định hoặc cấu hình: paragraph → sentence → word"""
+        text = document.content
+        if not text or not text.strip():
+            return []
+            
+        if separators is None:
+            separators = ["\n\n", "\n", ". ", " "]
+            
+        # 1. Thực hiện bổ nhỏ đệ quy để lấy danh sách nội dung dạng text chuỗi phẳng
+        text_chunks = self._recursive_split(text, separators)
+        
+        # 2. Đóng gói danh sách chuỗi thành List[Chunk] chuẩn chỉnh, tìm vị trí start/end chính xác
+        chunks = []
+        current_search_idx = 0
+        
+        for index, content in enumerate(text_chunks):
+            if not content.strip():
+                continue
+            # Tìm vị trí xuất hiện của chunk này trong văn bản gốc để gán start/end_index chuẩn xác
+            start_idx = text.find(content, current_search_idx)
+            if start_idx == -1:  # Dự phòng trường hợp strip làm lệch chuỗi
+                start_idx = current_search_idx
+            end_idx = start_idx + len(content)
+            current_search_idx = end_idx
+            
+            chunks.append(
+                self._create_chunk(
+                    doc_id=document.doc_id,
+                    content=content,
+                    start=start_idx,
+                    end=end_idx,
+                    index=index
+                )
+            )
+        return chunks
 
     def chunk_by_semantic(self, document: Document) -> List[Chunk]:
-        """Chia theo ranh giới câu (sentence boundary)"""
-        raise NotImplementedError("Semantic chunking chưa được triển khai")
-
+        """Chia dựa trên ranh giới ngữ nghĩa của câu (sentence boundaries)"""
+        # Tận dụng cấu trúc đệ quy nhưng ưu tiên thêm các dấu kết thúc câu chuyên sâu
+        raise NotImplementedError("chunk_by_semantic chưa được triển khai. Vui lòng sử dụng chunk_by_recursive hoặc chunk_by_fixed_size.")
+    
     def _create_chunk(
         self, doc_id: str, content: str, start: int, end: int, index: int
     ) -> Chunk:
         """Tạo Chunk object với chunk_id duy nhất"""
         if content is None:
-            raise ValueError("Không có nội dung để tạo chunk")
+            raise ValueError("Không có nội dung để tạo chunk") 
         
         unique_chunk_id = f"{doc_id}_ch_{index}"
 
@@ -107,5 +188,3 @@ class TextChunker(BaseChunker):
                 "strategy": self.strategy.value
             }
         )
-
-        
