@@ -111,6 +111,8 @@ class OllamaEmbeddingModel(BaseEmbeddingModel):
         Đảm bảo Property 5: embed_batch(texts)[i] == embed_text(texts[i])
         """
 
+        if not texts:
+            return []
         return [self.embed_text(text) for text in texts]
 
     @property
