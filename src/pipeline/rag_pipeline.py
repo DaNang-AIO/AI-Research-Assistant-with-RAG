@@ -133,12 +133,11 @@ class RAGPipeline:
 
         if contexts:
             context_block = "\n\n".join(
-                # TODO: đổi ctx.content / ctx.score thành đúng field thật của ScoredChunk
-                f"[Đoạn {i + 1}] (độ liên quan: {getattr(ctx, 'score', 0):.3f})\n{getattr(ctx, 'content', ctx)}"
+                f"[Đoạn {i + 1}] (độ liên quan: {ctx.score:.3f})\n{ctx.chunk.content}"
                 for i, ctx in enumerate(contexts)
             )
         else:
-            context_block = "(Không tìm thấy đoạn văn bản liên quan nào trong cơ sở dữ liệu.)"  
+            context_block = "(Không tìm thấy đoạn văn bản liên quan nào trong cơ sở dữ liệu.)"
 
         # chưa định nghĩa nên sẽ để một prompt theo mẫu
         # prompt = self.prompt_builder.build(question, contexts)
