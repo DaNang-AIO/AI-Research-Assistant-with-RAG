@@ -72,10 +72,12 @@ class OllamaEmbeddingModel(BaseEmbeddingModel):
         return vector
 
     def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Tạo embedding cho nhiều văn bản cùng lúc."""
-        raise NotImplementedError(
-            "OllamaEmbeddingModel.embed_batch() sẽ được triển khai đầy đủ ở Sprint 2"
-        )
+        """
+        Tạo embedding cho nhiều văn bản cùng lúc.
+        Đảm bảo Property 5: embed_batch(texts)[i] == embed_text(texts[i])
+        """
+
+        return [self.embed_text(text) for text in texts]
 
     @property
     def dimension(self) -> int:
