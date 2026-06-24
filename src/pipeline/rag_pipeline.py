@@ -112,6 +112,7 @@ class RAGPipeline:
         result = IndexingResult(
             doc_id = doc.doc_id,
             num_chunks = len(chunks),
+            collection_name = getattr(self.vector_store, "collection_name", "default"),
             success = success
         )
 
