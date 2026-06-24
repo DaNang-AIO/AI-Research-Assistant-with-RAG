@@ -86,15 +86,26 @@ class RAGPipeline:
         if not chunks or len(chunks) < 1:
             raise ValueError(f"File không đủ nội dung để tạo chunk: {file_path}")
 
-        texts = [c.content for c in chunks]
-        vectors = self.embedding_model.embed_batch(texts)
+        # Bước 3: Tạo embedding — Loop Invariant (design.md §2.7):
+        #   Sau mỗi vòng lặp i, len(vectors) == i (đã embed đúng i chunks, không mất, không thừa)
+        vectors: list = []
+        for i, chunk in enumerate(chunks):
+            assert len(vectors) == i, (
+                f"Loop invariant vi phạm tại i={i}: "
+                f"len(vectors)={len(vectors)} != i"
+            )
+            vector = self.embedding_model.embed_text(chunk.content)
+            if len(vector) != self.embedding_model.dimension:
+                raise ValueError(
+                    f"Embedding dimension mismatch cho chunk index {i}: "
+                    f"kỳ vọng {self.embedding_model.dimension}, nhận {len(vector)}"
+                )
+            vectors.append(vector)
 
-        # Postconditions
-        if len(vectors) != len(chunks):
-            raise RuntimeError("Embedding batch returned unexpected number of vectors")
-        for i, v in enumerate(vectors):
-            if len(v) != self.embedding_model.dimension:
-                raise ValueError(f"Embedding dimension mismatch for chunk index {i}")
+        # Postcondition sau vòng lặp
+        assert len(vectors) == len(chunks), (
+            f"Postcondition thất bại: len(vectors)={len(vectors)} != len(chunks)={len(chunks)}"
+        )
 
         # All vectors validated — store into vector DB
         success = self.vector_store.add(chunks, vectors)
