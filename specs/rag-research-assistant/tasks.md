@@ -130,7 +130,7 @@ Mỗi sprint dùng board 4 cột: `To Do → In Progress → Review/Demo Prep �
 | S2-DE-02 | DE | Triển khai `chunk_by_recursive()` và `chunk_by_semantic()` + `chunk()` điều phối theo `strategy`; đảm bảo bao phủ toàn bộ `document.content` và `chunk.doc_id == document.doc_id` | 🔗 Phụ thuộc | S2-DE-01 | 5 | Yêu cầu 2.2-2.5, Property 1, 2 |
 | S2-ME-01 | ME | Triển khai `OllamaEmbeddingModel.embed_text()`, `_call_ollama_api()`, property `dimension` (lazy-init); xử lý lỗi khi OLLAMA server không khả dụng | 🔹 Độc lập | S0-PE-02, S0-ME-01 | 5 | design.md §2.3 (OllamaEmbeddingModel), Yêu cầu 3.1, 3.2, 3.5, Property 3, 4 |
 | S2-ME-02 | ME | Triển khai `embed_batch()` đảm bảo `embed_batch(texts)[i] == embed_text(texts[i])` | 🔗 Phụ thuộc | S2-ME-01 | 2 | Yêu cầu 3.3, 3.4, Property 5 |
-| S2-DE-03 | DE | Triển khai `ChromaVectorStore.add()`, `_init_client()` (in-memory & persistent), `get_collection_stats()`, `delete_collection()` | 🔗 Phụ thuộc | S2-ME-01 | 5 | design.md §2.3 (ChromaVectorStore), Yêu cầu 4.1, 4.5, 4.6, 4.7 |
+| ✅ S2-DE-03 | DE | Triển khai `ChromaVectorStore.add()`, `_init_client()` (in-memory & persistent), `get_collection_stats()`, `delete_collection()` | 🔗 Phụ thuộc | S2-ME-01 | 5 | design.md §2.3 (ChromaVectorStore), Yêu cầu 4.1, 4.5, 4.6, 4.7 |
 | S2-PE-01 | PE | Thay stub bằng triển khai thật `RAGPipeline.index_document()` + `index_directory()` đúng pseudocode §2.7 (load→chunk→embed→store, loop invariant `len(vectors)==i`) | 🔗 Phụ thuộc | S2-DE-01, S2-DE-02, S2-ME-01, S2-ME-02, S2-DE-03 | 5 | Yêu cầu 7.1, 7.5, 7.6 |
 | S2-PE-02 | PE | Cập nhật trang "Document Upload" để dùng `index_document()` thật, hiển thị số chunk & trạng thái thật từ `IndexingResult` | 🔗 Phụ thuộc | S2-PE-01 | 2 | Yêu cầu 10.3 |
 | S2-DE-04 | DE | Notebook `data_engineer/01_document_loading.ipynb` | 🔗 Phụ thuộc | S1-DE-02 | 2 | Yêu cầu 9.1, 9.2 |
@@ -215,7 +215,7 @@ Bảng dưới chỉ liệt kê các cặp **phụ thuộc khác vai trò** (lo�
 | Task phụ thuộc (chờ) | Vai trò | ⟶ phụ thuộc vào | Vai trò nguồn | Vì sao |
 |---|---|---|---|---|
 | S1-PE-02/03 | PE | S0-DE-01, S1-DE-01 | DE | RAGPipeline & trang Upload cần `Document`/`DocumentLoader` thật |
-| S2-DE-03 | DE | S2-ME-01 | ME | `ChromaVectorStore.add` cần vector thật từ `embed_text` để lưu/kiểm thử |
+| ✅ S2-DE-03 | DE | S2-ME-01 | ME | `ChromaVectorStore.add` cần vector thật từ `embed_text` để lưu/kiểm thử |
 | S2-PE-01 | PE | S2-DE-01/02/03, S2-ME-01/02 | DE + ME | `index_document()` điều phối load→chunk→embed→store, cần cả 3 thành phần thật |
 | S3-PE-02/03 | PE | S3-DE-01 | DE | `Retriever`/`RAGPipeline.query` cần `similarity_search` thật để truy xuất context |
 | S3-PE-03 | PE | S3-ME-01 | ME | `query()` cần `OllamaClient.generate()` thật để sinh câu trả lời |

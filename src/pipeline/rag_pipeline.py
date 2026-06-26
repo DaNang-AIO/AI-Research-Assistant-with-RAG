@@ -99,9 +99,10 @@ class RAGPipeline:
         # All vectors validated — store into vector DB
         success = self.vector_store.add(chunks, vectors)
         result = IndexingResult(
-            doc_id = doc.doc_id,
-            num_chunks = len(chunks),
-            success = success
+            doc_id=doc.doc_id,
+            num_chunks=len(chunks),
+            collection_name=getattr(self.vector_store, "collection_name", ""),
+            success=success,
         )
 
         return result
