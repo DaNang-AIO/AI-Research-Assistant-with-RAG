@@ -21,7 +21,7 @@ class ChromaVectorStore(BaseVectorStore):
 
     Preconditions:
       - collection_name không rỗng
-      - persist_dir (nếu có) là đường dẫn hợp lệ, ChromaDB sẽ tự tạo nếu chưa tồn tại
+      - persist_dir (nếu có) là đường dẫn hợp lệ, ChromaDB tự tạo nếu chưa có
 
     Postconditions:
       - Sau khi add() thành công, chunks có thể truy xuất qua similarity_search()
@@ -88,21 +88,39 @@ class ChromaVectorStore(BaseVectorStore):
         )
 
     @staticmethod
-    def _sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_metadata(chunk: Chunk) -> Dict[str, Any]:
         """
-        ChromaDB chỉ chấp nhận metadata value là str | int | float | bool.
-        Convert các giá trị khác (Enum, None, list...) sang str để tránh lỗi.
+        Xây dựng metadata dict để lưu vào ChromaDB.
+
+        Merge các field cốt lõi của Chunk (chunk_id, doc_id, start_index,
+        end_index) vào trước, rồi overlay chunk.metadata lên sau.
+        Điều này đảm bảo:
+          1. ChromaDB không nhận dict rỗng {} (chromadb==0.4.22 reject empty metadata)
+          2. Đủ thông tin để reconstruct Chunk từ kết quả similarity_search sau này
+          3. Mọi giá trị đều là kiểu ChromaDB chấp nhận: str | int | float | bool
+
+        Lưu ý: chunk.metadata value có thể là Enum, None, list, dict —
+        tất cả đều được convert sang str.
         """
-        sanitized = {}
-        for key, value in metadata.items():
+        # Field cốt lõi — luôn có giá trị hợp lệ
+        base: Dict[str, Any] = {
+            "chunk_id": chunk.chunk_id,
+            "doc_id": chunk.doc_id,
+            "start_index": chunk.start_index,
+            "end_index": chunk.end_index,
+        }
+
+        # Overlay metadata tùy chỉnh từ chunk, convert sang kiểu ChromaDB hợp lệ
+        for key, value in chunk.metadata.items():
             if isinstance(value, (str, int, float, bool)):
-                sanitized[key] = value
+                base[key] = value
             elif value is None:
-                sanitized[key] = ""
+                base[key] = ""
             else:
                 # Enum, list, dict, ... → chuyển sang string
-                sanitized[key] = str(value)
-        return sanitized
+                base[key] = str(value)
+
+        return base
 
     # ------------------------------------------------------------------
     # Public interface
@@ -135,7 +153,8 @@ class ChromaVectorStore(BaseVectorStore):
 
         ids = [chunk.chunk_id for chunk in chunks]
         documents = [chunk.content for chunk in chunks]
-        metadatas = [self._sanitize_metadata(chunk.metadata) for chunk in chunks]
+        # _build_metadata đảm bảo: không rỗng, có đủ field cốt lõi, type hợp lệ
+        metadatas = [self._build_metadata(chunk) for chunk in chunks]
 
         try:
             self._collection.add(
@@ -183,7 +202,7 @@ class ChromaVectorStore(BaseVectorStore):
                 "ChromaVectorStore.delete_collection(): đã xóa collection '%s'",
                 collection_name,
             )
-            # Nếu xóa đúng collection đang dùng → reset để tránh dùng collection cũ
+            # Nếu xóa đúng collection đang dùng → reset để tránh dùng object cũ
             if collection_name == self.collection_name:
                 self._collection = None
             return True
