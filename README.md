@@ -50,3 +50,5 @@ Xem [design.md §1.2](specs/rag-research-assistant/design.md) để biết chi t
 ## Trạng Thái
 
 Dự án đang ở **Sprint 0 — Khởi Tạo & Nền Tảng**: đã có khung thư mục, data models, interfaces (ABC) và cấu hình dùng chung. Xem [tasks.md](specs/rag-research-assistant/tasks.md) để theo dõi lộ trình các sprint tiếp theo.
+
+Link web demo: https://ai-research-assistant-with-rag.streamlit.app/
