@@ -1,8 +1,8 @@
 """Trang 1 — Document Upload (design.md §2.6, Yêu cầu 10.3).
 
 Triển khai: S1-PE-03 (phụ thuộc S1-PE-01, S1-PE-02, S1-DE-01).
-Sprint 1: gọi pipeline.index_document() — hiện là STUB trả IndexingResult giả lập.
-Sprint 2: thay bằng indexing thật khi S2-PE-01 hoàn thành.
+Sprint 2 (S2-PE-02): index_document() thật với ChromaDB + OllamaEmbedding.
+Kết quả hiển thị num_chunks, doc_id, collection_name từ IndexingResult thật.
 """
 
 import sys
@@ -119,11 +119,11 @@ def main() -> None:
         "Sau khi index xong, bạn có thể đặt câu hỏi trên trang **Chat Interface**."
     )
 
-    # ── Thông báo Sprint 1 (stub) ────────────────────────────────────────────
-    st.info(
-        "ℹ️ **Sprint 1 — RAGPipeline integrated:** `index_document()` được gọi qua pipeline thật tích hợp với `DocumentLoader` chạy thật. "
-        "Các công đoạn chia nhỏ, vector hóa và lưu trữ (ChromaDB) đang ở chế độ stub và sẽ được hoàn thiện ở Sprint 2.",
-        icon="ℹ️",
+    # ── Thông báo Sprint 2 (full pipeline) ─────────────────────────────────────
+    st.success(
+        "✅ **Sprint 2 — Full pipeline active:** `index_document()` chạy thật với "
+        "**ChromaDB** (lưu vector) + **OllamaEmbedding** (tạo embedding). "
+        "Số chunk và trạng thái hiển thị trực tiếp từ `IndexingResult` thật.",
     )
 
     st.markdown("---")
